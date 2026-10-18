@@ -5,14 +5,11 @@ const API = 'http://localhost:5000/api';
 
 export default function CourseDetail({ course, onBack }) {
   const [lessons, setLessons] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
   useEffect(() => {
-    if (!course?._id) {
-      setLoading(false);
-      return;
-    }
+    if (!course?._id) return;
 
     const controller = new AbortController();
 
@@ -56,12 +53,16 @@ export default function CourseDetail({ course, onBack }) {
   return (
     <section className="student-page">
       <button type="button" onClick={onBack}>
-        ← Back to Courses
+        Back to Courses
       </button>
 
       <h2>{course.title}</h2>
       <p>{course.description || 'No description available.'}</p>
       <p>Category: {course.category || 'General'}</p>
+
+      {course.instructor?.name && (
+        <p>Instructor: {course.instructor.name}</p>
+      )}
 
       <h3>Course Lessons</h3>
 
@@ -69,22 +70,23 @@ export default function CourseDetail({ course, onBack }) {
       {error && <p role="alert">{error}</p>}
 
       {!loading && !error && lessons.length === 0 && (
-        <p>No lessons added yet.</p>
+        <p>No lessons available yet.</p>
       )}
 
-      {!loading && !error && lessons.map((lesson) => (
-        <article className="student-course-card" key={lesson._id}>
-          <h4>{lesson.title}</h4>
-          <p>Type: {lesson.type || 'Lesson'}</p>
+      {!loading && !error && lessons.map((lesson, index) => (
+        <article className="lesson-item" key={lesson._id}>
+          <h4>{index + 1}. {lesson.title}</h4>
 
-          {lesson.type === 'video' && lesson.videoUrl && (
-            <a href={lesson.videoUrl} target="_blank" rel="noreferrer">
-              Open lesson video
+          {lesson.type === 'video' && lesson.videoUrl ? (
+            <a
+              href={lesson.videoUrl}
+              target="_blank"
+              rel="noreferrer"
+            >
+              Open Lesson Video
             </a>
-          )}
-
-          {lesson.type === 'text' && lesson.content && (
-            <p>{lesson.content}</p>
+          ) : (
+            <p>{lesson.content || 'No lesson content available.'}</p>
           )}
         </article>
       ))}
