@@ -1,0 +1,544 @@
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  margin: 0;
+  font-family: Arial, sans-serif;
+  color: #172033;
+  background: #f8faff;
+}
+
+.navbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px 8%;
+  background: white;
+  box-shadow: 0 2px 12px #0000000d;
+}
+
+.navbar h2 {
+  color: #6045e8;
+  margin: 0;
+}
+
+nav {
+  display: flex;
+  align-items: center;
+  gap: 25px;
+}
+
+nav a {
+  text-decoration: none;
+  color: #172033;
+}
+
+button {
+  border: 0;
+  border-radius: 8px;
+  background: #6045e8;
+  color: white;
+  padding: 12px 20px;
+  cursor: pointer;
+  font-size: 15px;
+}
+
+.hero {
+  text-align: center;
+  padding: 100px 20px;
+  background: linear-gradient(135deg, #f0edff, #ffffff);
+}
+
+.tagline {
+  color: #6045e8;
+  font-weight: bold;
+  letter-spacing: 2px;
+}
+
+.hero h1 {
+  font-size: clamp(38px, 5vw, 64px);
+  line-height: 1.15;
+  margin: 20px 0;
+}
+
+.description {
+  max-width: 600px;
+  margin: 0 auto 28px;
+  line-height: 1.8;
+  color: #657087;
+}
+
+.courses {
+  padding: 60px 8%;
+  text-align: center;
+}
+
+.courses > p {
+  color: #657087;
+}
+
+.course-list {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 24px;
+  margin-top: 35px;
+}
+
+.course-card {
+  background: white;
+  border: 1px solid #e7e8f0;
+  border-radius: 14px;
+  padding: 28px;
+  text-align: left;
+}
+
+.course-card h3 {
+  color: #6045e8;
+}
+
+.course-card p {
+  color: #657087;
+  line-height: 1.6;
+}
+
+footer {
+  text-align: center;
+  padding: 25px;
+  background: white;
+  color: #657087;
+}
+
+@media (max-width: 650px) {
+  .navbar {
+    flex-direction: column;
+    gap: 18px;
+  }
+
+  nav {
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 15px;
+  }
+
+  .hero {
+    padding: 65px 20px;
+  }
+
+  .course-list {
+    grid-template-columns: 1fr;
+  }
+}
+
+.auth-section {
+  min-height: 75vh;
+  padding: 48px 20px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: #f5f7fb;
+}
+
+.auth-card {
+  width: 100%;
+  max-width: 430px;
+  padding: 32px;
+  background: white;
+  border-radius: 16px;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.08);
+}
+
+.auth-card h1 {
+  margin-bottom: 10px;
+}
+
+.auth-card > p {
+  color: #667085;
+  margin-bottom: 22px;
+}
+
+.auth-card label {
+  display: block;
+  margin: 15px 0 7px;
+  font-weight: 600;
+}
+
+.auth-card input,
+.auth-card select {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 12px;
+  border: 1px solid #d0d5dd;
+  border-radius: 8px;
+  font-size: 15px;
+}
+
+.submit-button {
+  width: 100%;
+  margin-top: 22px;
+}
+
+.submit-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.nav-link,
+.text-button,
+.back-button {
+  background: transparent;
+  color: #344054;
+  border: none;
+  cursor: pointer;
+}
+
+.text-button {
+  color: #2563eb;
+  font-weight: 600;
+}
+
+.back-button {
+  display: block;
+  margin: 15px auto 0;
+}
+
+.auth-switch {
+  margin-top: 20px;
+  text-align: center;
+}
+
+.success-message,
+.error-message {
+  padding: 12px;
+  margin: 12px 0;
+  border-radius: 8px;
+  font-size: 14px;
+}
+
+.success-message {
+  background: #ecfdf3;
+  color: #027a48;
+}
+
+.error-message {
+  background: #fef3f2;
+  color: #b42318;
+}
+
+.secondary-button {
+  margin-left: 10px;
+}
+
+.welcome-message,
+.home-message {
+  margin-top: 20px;
+}
+
+.navbar h2 {
+  cursor: pointer;
+}
+
+@media (max-width: 600px) {
+  .navbar {
+    flex-wrap: wrap;
+    gap: 15px;
+  }
+
+  .navbar nav {
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+
+  .auth-card {
+    padding: 24px;
+  }
+
+  .secondary-button {
+    margin: 12px 0 0;
+  }
+}
+
+.instructor-section {
+  padding: 45px 8%;
+  background: #ffffff;
+  text-align: center;
+}
+
+.instructor-section > h2 {
+  color: #6045ef;
+  margin-bottom: 8px;
+}
+
+.course-form {
+  max-width: 600px;
+  margin: 28px auto 40px;
+  padding: 28px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  text-align: left;
+  background: #f8f7ff;
+  border: 1px solid #e3defe;
+  border-radius: 14px;
+}
+
+.course-form h3 {
+  margin-top: 0;
+  text-align: center;
+}
+
+.course-form label {
+  font-weight: 600;
+  margin-top: 6px;
+}
+
+.course-form input,
+.course-form textarea {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 12px;
+  border: 1px solid #d7d4e8;
+  border-radius: 8px;
+  font: inherit;
+  background: #ffffff;
+}
+
+.course-form textarea {
+  resize: vertical;
+}
+
+.course-form button {
+  margin-top: 10px;
+  padding: 12px;
+  border: none;
+  border-radius: 8px;
+  background: #6045ef;
+  color: white;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.course-form button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.my-courses {
+  max-width: 1000px;
+  margin: 0 auto;
+}
+
+.my-courses .course-list {
+  margin-top: 20px;
+}
+
+.error-message {
+  color: #b42318;
+  background: #fff0ef;
+  padding: 12px;
+  border-radius: 8px;
+  text-align: center;
+}
+
+.success-message {
+  color: #16733b;
+  background: #eaf8ef;
+  padding: 12px;
+  border-radius: 8px;
+}
+
+/* ===== Axlero LMS - Quiz UI Improvements ===== */
+
+.instructor-section,
+.courses,
+.my-courses {
+  text-align: left;
+}
+
+.instructor-section > h2,
+.courses > h2,
+.my-courses > h2 {
+  color: #6045e8;
+}
+
+.course-list {
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  align-items: stretch;
+}
+
+.course-card {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  box-shadow: 0 5px 20px rgba(30, 35, 70, 0.04);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.course-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 10px 26px rgba(30, 35, 70, 0.09);
+}
+
+/* Lesson and quiz panels */
+.lesson-section,
+.quiz-section,
+.quiz-panel {
+  width: 100%;
+  max-width: 760px;
+  margin: 24px auto;
+  padding: 28px;
+  background: #ffffff;
+  border: 1px solid #e6e8f0;
+  border-radius: 16px;
+  box-shadow: 0 8px 24px rgba(30, 35, 70, 0.05);
+}
+
+.quiz-section h2,
+.quiz-panel h2,
+.quiz-section h3,
+.quiz-panel h3 {
+  color: #25304a;
+  margin-top: 0;
+}
+
+/* Quiz question form */
+.quiz-section form,
+.quiz-panel form,
+.quiz-form {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 20px;
+}
+
+.quiz-section input:not([type="radio"]),
+.quiz-panel input:not([type="radio"]),
+.quiz-form input:not([type="radio"]),
+.quiz-section select,
+.quiz-panel select,
+.quiz-form select,
+.quiz-section textarea,
+.quiz-panel textarea,
+.quiz-form textarea {
+  width: 100%;
+  padding: 12px 14px;
+  border: 1px solid #d9deea;
+  border-radius: 9px;
+  background: #fbfcff;
+  font-size: 15px;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.quiz-section input:focus,
+.quiz-panel input:focus,
+.quiz-form input:focus,
+.quiz-section select:focus,
+.quiz-panel select:focus,
+.quiz-form select:focus,
+.quiz-section textarea:focus,
+.quiz-panel textarea:focus,
+.quiz-form textarea:focus {
+  outline: none;
+  border-color: #6045e8;
+  box-shadow: 0 0 0 3px rgba(96, 69, 232, 0.10);
+}
+
+.quiz-section label,
+.quiz-panel label,
+.quiz-form label {
+  margin-top: 8px;
+  font-weight: 600;
+  color: #344054;
+  font-size: 14px;
+}
+
+/* Quiz buttons */
+.quiz-section button,
+.quiz-panel button,
+.quiz-form button {
+  align-self: flex-start;
+  margin-top: 10px;
+  padding: 12px 18px;
+  background: #6045e8;
+  color: #ffffff;
+  border-radius: 9px;
+  font-weight: 600;
+}
+
+.quiz-section button:hover:not(:disabled),
+.quiz-panel button:hover:not(:disabled),
+.quiz-form button:hover:not(:disabled) {
+  background: #4d32cf;
+}
+
+/* Quiz question cards */
+.quiz-question,
+.question-card {
+  padding: 20px;
+  margin: 16px 0;
+  border: 1px solid #e5e7f0;
+  border-radius: 12px;
+  background: #fbfbff;
+}
+
+.quiz-question p,
+.question-card p {
+  color: #344054;
+  font-weight: 600;
+}
+
+/* Student answer choices */
+.quiz-section label:has(input[type="radio"]),
+.quiz-panel label:has(input[type="radio"]),
+.quiz-question label:has(input[type="radio"]) {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 8px 0;
+  padding: 12px;
+  border: 1px solid #e1e5ef;
+  border-radius: 9px;
+  background: #ffffff;
+  cursor: pointer;
+  font-weight: 400;
+}
+
+.quiz-section label:has(input[type="radio"]):hover,
+.quiz-panel label:has(input[type="radio"]):hover,
+.quiz-question label:has(input[type="radio"]):hover {
+  border-color: #a99af8;
+  background: #f8f6ff;
+}
+
+.quiz-section input[type="radio"],
+.quiz-panel input[type="radio"],
+.quiz-question input[type="radio"] {
+  width: auto;
+  margin: 0;
+  accent-color: #6045e8;
+}
+
+/* Tablet and mobile */
+@media (max-width: 650px) {
+  .lesson-section,
+  .quiz-section,
+  .quiz-panel {
+    padding: 18px;
+    margin: 18px auto;
+  }
+
+  .course-list {
+    grid-template-columns: 1fr;
+  }
+
+  .quiz-section button,
+  .quiz-panel button,
+  .quiz-form button {
+    width: 100%;
+  }
+}
