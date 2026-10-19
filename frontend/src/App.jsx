@@ -1,34 +1,34 @@
+import { useState } from "react";
+import CourseCatalog from "./pages/CourseCatalog";
+import CourseDetail from "./pages/CourseDetail";
+import StudentDashboard from "./pages/StudentDashboard";
+import InstructorCourseBuilder from "./pages/InstructorCourseBuilder";
+import "./App.css";
 
-import { useState } from 'react';
-import CourseCatalog from './pages/CourseCatalog';
-import CourseDetail from './pages/CourseDetail';
-import StudentDashboard from './pages/StudentDashboard';
-import './App.css';
-
-const API = 'http://localhost:5000/api';
+const API = "http://localhost:5000/api";
 
 export default function App() {
-  const [page, setPage] = useState('courses');
+  const [page, setPage] = useState("courses");
   const [selectedCourse, setSelectedCourse] = useState(null);
   const [user, setUser] = useState(() => {
     try {
-      return JSON.parse(sessionStorage.getItem('axleroUser')) || null;
+      return JSON.parse(sessionStorage.getItem("axleroUser")) || null;
     } catch {
       return null;
     }
   });
-  const [authMode, setAuthMode] = useState('login');
-  const [name, setName] = useState('');
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [role, setRole] = useState('student');
+  const [authMode, setAuthMode] = useState("login");
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [role, setRole] = useState("student");
   const [authLoading, setAuthLoading] = useState(false);
-  const [authMessage, setAuthMessage] = useState('');
-  const [authError, setAuthError] = useState('');
+  const [authMessage, setAuthMessage] = useState("");
+  const [authError, setAuthError] = useState("");
 
   function openCourse(course) {
     setSelectedCourse(course);
-    setPage('detail');
+    setPage("detail");
   }
 
   function showPage(nextPage) {
@@ -38,58 +38,58 @@ export default function App() {
 
   async function handleAuth(event) {
     event.preventDefault();
-    setAuthMessage('');
-    setAuthError('');
+    setAuthMessage("");
+    setAuthError("");
     setAuthLoading(true);
 
     try {
       const endpoint =
-        authMode === 'register' ? '/auth/register' : '/auth/login';
+        authMode === "register" ? "/auth/register" : "/auth/login";
 
       const payload =
-        authMode === 'register'
+        authMode === "register"
           ? { name, email, password, role }
           : { email, password };
 
       const response = await fetch(`${API}${endpoint}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });
 
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.message || 'Authentication failed');
+        throw new Error(data.message || "Authentication failed");
       }
 
-      if (authMode === 'register') {
-        setAuthMessage('Registration successful. Please log in.');
-        setAuthMode('login');
-        setPassword('');
+      if (authMode === "register") {
+        setAuthMessage("Registration successful. Please log in.");
+        setAuthMode("login");
+        setPassword("");
         return;
       }
 
-      sessionStorage.setItem('axleroToken', data.token);
-      sessionStorage.setItem('axleroUser', JSON.stringify(data.user));
+      sessionStorage.setItem("axleroToken", data.token);
+      sessionStorage.setItem("axleroUser", JSON.stringify(data.user));
       setUser(data.user);
-      setPassword('');
-      setAuthMessage('');
-      setPage('courses');
+      setPassword("");
+      setAuthMessage("");
+      setPage("courses");
     } catch (err) {
-      setAuthError(err.message || 'Unable to connect to the server.');
+      setAuthError(err.message || "Unable to connect to the server.");
     } finally {
       setAuthLoading(false);
     }
   }
 
   function logout() {
-    sessionStorage.removeItem('axleroToken');
-    sessionStorage.removeItem('axleroUser');
+    sessionStorage.removeItem("axleroToken");
+    sessionStorage.removeItem("axleroUser");
     setUser(null);
     setSelectedCourse(null);
-    setPage('courses');
-    setAuthMessage('You have logged out.');
+    setPage("courses");
+    setAuthMessage("You have logged out.");
   }
 
   return (
@@ -98,22 +98,28 @@ export default function App() {
         <h1>Axlero LMS</h1>
 
         <nav aria-label="Student navigation">
-          <button type="button" onClick={() => showPage('courses')}>
+          <button type="button" onClick={() => showPage("courses")}>
             Course Catalog
           </button>
 
-          <button type="button" onClick={() => showPage('dashboard')}>
+          <button type="button" onClick={() => showPage("dashboard")}>
             My Learning
           </button>
+
+          {user?.role === "instructor" && (
+            <button type="button" onClick={() => showPage("instructor")}>
+              Create Course
+            </button>
+          )}
 
           {!user ? (
             <button
               type="button"
               onClick={() => {
-                setAuthMode('login');
-                setAuthError('');
-                setAuthMessage('');
-                showPage('auth');
+                setAuthMode("login");
+                setAuthError("");
+                setAuthMessage("");
+                showPage("auth");
               }}
             >
               Login / Register
@@ -127,12 +133,12 @@ export default function App() {
       </header>
 
       <main>
-        {page === 'auth' && (
+        {page === "auth" && (
           <section className="student-page auth-panel">
-            <h2>{authMode === 'login' ? 'Login' : 'Create Account'}</h2>
+            <h2>{authMode === "login" ? "Login" : "Create Account"}</h2>
 
             <form onSubmit={handleAuth}>
-              {authMode === 'register' && (
+              {authMode === "register" && (
                 <>
                   <label htmlFor="auth-name">Full name</label>
                   <input
@@ -179,43 +185,45 @@ export default function App() {
 
               <button type="submit" disabled={authLoading}>
                 {authLoading
-                  ? 'Please wait...'
-                  : authMode === 'login'
-                    ? 'Login'
-                    : 'Register'}
+                  ? "Please wait..."
+                  : authMode === "login"
+                    ? "Login"
+                    : "Register"}
               </button>
             </form>
 
             <p>
-              {authMode === 'login'
+              {authMode === "login"
                 ? "Don't have an account?"
-                : 'Already have an account?'}{' '}
+                : "Already have an account?"}{" "}
               <button
                 type="button"
                 onClick={() => {
-                  setAuthMode(authMode === 'login' ? 'register' : 'login');
-                  setAuthError('');
-                  setAuthMessage('');
+                  setAuthMode(authMode === "login" ? "register" : "login");
+                  setAuthError("");
+                  setAuthMessage("");
                 }}
               >
-                {authMode === 'login' ? 'Register' : 'Login'}
+                {authMode === "login" ? "Register" : "Login"}
               </button>
             </p>
           </section>
         )}
 
-        {page === 'courses' && (
-          <CourseCatalog onSelectCourse={openCourse} />
-        )}
+        {page === "courses" && <CourseCatalog onSelectCourse={openCourse} />}
 
-        {page === 'dashboard' && (
+        {page === "dashboard" && (
           <StudentDashboard onSelectCourse={openCourse} />
         )}
 
-        {page === 'detail' && selectedCourse && (
+        {page === "instructor" && user?.role === "instructor" && (
+          <InstructorCourseBuilder />
+        )}
+
+        {page === "detail" && selectedCourse && (
           <CourseDetail
             course={selectedCourse}
-            onBack={() => showPage('courses')}
+            onBack={() => showPage("courses")}
           />
         )}
       </main>
