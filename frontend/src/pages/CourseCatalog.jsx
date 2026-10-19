@@ -1,7 +1,5 @@
-
 import { useEffect, useState } from 'react';
-
-const API = 'http://localhost:5000/api';
+import { getCourses, enrollInCourse } from '../api/courseApi';
 
 export default function CourseCatalog({ onSelectCourse }) {
   const [courses, setCourses] = useState([]);
@@ -13,12 +11,9 @@ export default function CourseCatalog({ onSelectCourse }) {
   useEffect(() => {
     async function fetchCourses() {
       try {
-        const response = await fetch(`${API}/courses`);
-        const data = await response.json();
+        setError('');
 
-        if (!response.ok) {
-          throw new Error(data.message || 'Unable to load courses');
-        }
+        const data = await getCourses();
 
         setCourses(data.courses || []);
       } catch (err) {
@@ -44,19 +39,7 @@ export default function CourseCatalog({ onSelectCourse }) {
     setEnrollingCourse(courseId);
 
     try {
-      const response = await fetch(`${API}/enrollments/${courseId}`, {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.message || 'Unable to enroll in this course.');
-      }
+      const data = await enrollInCourse(courseId);
 
       setMessage(data.message || 'Successfully enrolled in the course!');
     } catch (err) {
@@ -72,7 +55,9 @@ export default function CourseCatalog({ onSelectCourse }) {
       <p>Discover courses and continue your learning journey.</p>
 
       {message && <p role="status">{message}</p>}
+
       {loading && <p>Loading courses...</p>}
+
       {error && <p role="alert">{error}</p>}
 
       {!loading && !error && courses.length === 0 && (
@@ -87,6 +72,7 @@ export default function CourseCatalog({ onSelectCourse }) {
             </span>
 
             <h3>{course.title}</h3>
+
             <p>{course.description || 'No description available.'}</p>
 
             {course.instructor?.name && (

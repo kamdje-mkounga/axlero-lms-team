@@ -3,20 +3,24 @@ import { useState } from 'react';
 import CourseCatalog from './pages/CourseCatalog';
 import CourseDetail from './pages/CourseDetail';
 import StudentDashboard from './pages/StudentDashboard';
+import LearningPage from './pages/LearningPage';
 import './App.css';
 
-const API = 'http://localhost:5000/api';
+const API = `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api`;
+const USE_MOCK = import.meta.env.VITE_USE_MOCK === 'true';
+
+function getSavedUser() {
+  try {
+    return JSON.parse(sessionStorage.getItem('axleroUser')) || null;
+  } catch {
+    return null;
+  }
+}
 
 export default function App() {
   const [page, setPage] = useState('courses');
   const [selectedCourse, setSelectedCourse] = useState(null);
-  const [user, setUser] = useState(() => {
-    try {
-      return JSON.parse(sessionStorage.getItem('axleroUser')) || null;
-    } catch {
-      return null;
-    }
-  });
+  const [user, setUser] = useState(getSavedUser);
   const [authMode, setAuthMode] = useState('login');
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -31,6 +35,11 @@ export default function App() {
     setPage('detail');
   }
 
+  function openLearning(course) {
+  console.log('Continue Learning clicked:', course);
+  setSelectedCourse(course);
+  setPage('learning');
+}
   function showPage(nextPage) {
     setSelectedCourse(null);
     setPage(nextPage);
@@ -43,13 +52,44 @@ export default function App() {
     setAuthLoading(true);
 
     try {
+      const normalizedEmail = email.trim().toLowerCase();
+
+      if (USE_MOCK) {
+        if (authMode === 'register') {
+          setAuthMessage(
+            'Demo registration successful! You can now log in.'
+          );
+          setAuthMode('login');
+          setPassword('');
+          return;
+        }
+
+        const mockUser = {
+          id: 'mock-student',
+          name: name.trim() || normalizedEmail.split('@')[0],
+          email: normalizedEmail,
+          role: 'student',
+        };
+
+        sessionStorage.setItem('axleroToken', 'mock-demo-token');
+        sessionStorage.setItem(
+          'axleroUser',
+          JSON.stringify(mockUser)
+        );
+
+        setUser(mockUser);
+        setPassword('');
+        setPage('courses');
+        return;
+      }
+
       const endpoint =
         authMode === 'register' ? '/auth/register' : '/auth/login';
 
       const payload =
         authMode === 'register'
-          ? { name, email, password, role }
-          : { email, password };
+          ? { name: name.trim(), email: normalizedEmail, password, role }
+          : { email: normalizedEmail, password };
 
       const response = await fetch(`${API}${endpoint}`, {
         method: 'POST',
@@ -60,7 +100,7 @@ export default function App() {
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.message || 'Authentication failed');
+        throw new Error(data.message || 'Authentication failed.');
       }
 
       if (authMode === 'register') {
@@ -70,11 +110,15 @@ export default function App() {
         return;
       }
 
+      if (!data.token || !data.user) {
+        throw new Error('The server returned an invalid login response.');
+      }
+
       sessionStorage.setItem('axleroToken', data.token);
       sessionStorage.setItem('axleroUser', JSON.stringify(data.user));
+
       setUser(data.user);
       setPassword('');
-      setAuthMessage('');
       setPage('courses');
     } catch (err) {
       setAuthError(err.message || 'Unable to connect to the server.');
@@ -89,7 +133,8 @@ export default function App() {
     setUser(null);
     setSelectedCourse(null);
     setPage('courses');
-    setAuthMessage('You have logged out.');
+    setAuthMessage('');
+    setAuthError('');
   }
 
   return (
@@ -193,7 +238,9 @@ export default function App() {
               <button
                 type="button"
                 onClick={() => {
-                  setAuthMode(authMode === 'login' ? 'register' : 'login');
+                  setAuthMode(
+                    authMode === 'login' ? 'register' : 'login'
+                  );
                   setAuthError('');
                   setAuthMessage('');
                 }}
@@ -201,6 +248,13 @@ export default function App() {
                 {authMode === 'login' ? 'Register' : 'Login'}
               </button>
             </p>
+
+            {USE_MOCK && (
+              <p>
+                Demo mode: authentication is simulated. No real account
+                is created.
+              </p>
+            )}
           </section>
         )}
 
@@ -216,6 +270,14 @@ export default function App() {
           <CourseDetail
             course={selectedCourse}
             onBack={() => showPage('courses')}
+            onContinue={() => openLearning(selectedCourse)}
+          />
+        )}
+
+        {page === 'learning' && selectedCourse && (
+          <LearningPage
+            course={selectedCourse}
+            onBack={() => showPage('dashboard')}
           />
         )}
       </main>
