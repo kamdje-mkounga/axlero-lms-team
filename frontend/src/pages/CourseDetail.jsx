@@ -1,54 +1,111 @@
 
 import { useEffect, useState } from 'react';
+import {
+  getCourseById,
+  enrollInCourse,
+  getMyEnrollments,
+} from '../api/courseApi';
 
-const API = 'http://localhost:5000/api';
-
-export default function CourseDetail({ course, onBack }) {
-  const [lessons, setLessons] = useState([]);
+export default function CourseDetail({
+  course,
+  onBack,
+  onContinue,
+}) {
+  const [courseDetails, setCourseDetails] = useState(course || null);
+  const [enrolled, setEnrolled] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [enrolling, setEnrolling] = useState(false);
   const [error, setError] = useState('');
+  const [message, setMessage] = useState('');
 
   useEffect(() => {
     if (!course?._id) return;
 
-    const controller = new AbortController();
+    let active = true;
 
-    async function fetchLessons() {
+    async function loadCourse() {
       setLoading(true);
       setError('');
 
       try {
-        const response = await fetch(
-          `${API}/courses/${course._id}/lessons`,
-          { signal: controller.signal }
-        );
+        const [details, enrollments] = await Promise.all([
+          getCourseById(course._id),
+          getMyEnrollments(),
+        ]);
 
-        const data = await response.json();
+        if (active) {
+          setCourseDetails(details);
 
-        if (!response.ok) {
-          throw new Error(data.message || 'Unable to load lessons');
+          setEnrolled(
+            enrollments.some((item) => {
+              const enrolledCourseId =
+                item.courseId || item.course?._id;
+
+              return enrolledCourseId === course._id;
+            })
+          );
         }
-
-        setLessons(data.lessons || []);
       } catch (err) {
-        if (err.name !== 'AbortError') {
-          setError(err.message || 'Unable to load lessons.');
+        if (active) {
+          setError(
+            err.message || 'Unable to load course details.'
+          );
         }
       } finally {
-        if (!controller.signal.aborted) {
+        if (active) {
           setLoading(false);
         }
       }
     }
 
-    fetchLessons();
+    loadCourse();
 
-    return () => controller.abort();
+    return () => {
+      active = false;
+    };
   }, [course?._id]);
 
-  if (!course) {
-    return <p>No course selected.</p>;
+  async function handleEnroll() {
+    if (!courseDetails?._id || enrolling) return;
+
+    setEnrolling(true);
+    setError('');
+    setMessage('');
+
+    try {
+      const result = await enrollInCourse(courseDetails._id);
+
+      setEnrolled(true);
+      setMessage(
+        result.message || 'Enrollment successful!'
+      );
+    } catch (err) {
+      setError(
+        err.message || 'Unable to enroll in this course.'
+      );
+    } finally {
+      setEnrolling(false);
+    }
   }
+
+  const selectedCourse = courseDetails || course;
+
+  if (!selectedCourse) {
+    return (
+      <section className="student-page">
+        <p>No course selected.</p>
+
+        <button type="button" onClick={onBack}>
+          Back to Courses
+        </button>
+      </section>
+    );
+  }
+
+  const instructor =
+    typeof selectedCourse.instructor === 'string'
+      ? selectedCourse.instructor
+      : selectedCourse.instructor?.name || 'Not specified';
 
   return (
     <section className="student-page">
@@ -56,40 +113,53 @@ export default function CourseDetail({ course, onBack }) {
         Back to Courses
       </button>
 
-      <h2>{course.title}</h2>
-      <p>{course.description || 'No description available.'}</p>
-      <p>Category: {course.category || 'General'}</p>
+      <h2>{selectedCourse.title}</h2>
 
-      {course.instructor?.name && (
-        <p>Instructor: {course.instructor.name}</p>
+      <p>
+        {selectedCourse.description ||
+          'No description available.'}
+      </p>
+
+      <p>
+        Category: {selectedCourse.category || 'General'}
+      </p>
+
+      <p>Instructor: {instructor}</p>
+
+      {selectedCourse.duration && (
+        <p>Duration: {selectedCourse.duration}</p>
       )}
 
-      <h3>Course Lessons</h3>
+      {loading && (
+        <p role="status">Loading course details...</p>
+      )}
 
-      {loading && <p>Loading lessons...</p>}
       {error && <p role="alert">{error}</p>}
 
-      {!loading && !error && lessons.length === 0 && (
-        <p>No lessons available yet.</p>
+      
+{enrolled ? (
+        
+<button
+  type="button"
+  onClick={() => {
+    console.log('Continue button clicked');
+    onContinue();
+  }}
+  disabled={loading}
+>
+  Continue Learning
+</button>
+
+      ) : (
+        <button
+          type="button"
+          onClick={handleEnroll}
+          disabled={loading || enrolling}
+        >
+          {enrolling ? 'Enrolling...' : 'Enroll Now'}
+        </button>
       )}
-
-      {!loading && !error && lessons.map((lesson, index) => (
-        <article className="lesson-item" key={lesson._id}>
-          <h4>{index + 1}. {lesson.title}</h4>
-
-          {lesson.type === 'video' && lesson.videoUrl ? (
-            <a
-              href={lesson.videoUrl}
-              target="_blank"
-              rel="noreferrer"
-            >
-              Open Lesson Video
-            </a>
-          ) : (
-            <p>{lesson.content || 'No lesson content available.'}</p>
-          )}
-        </article>
-      ))}
+      {message && <p role="status">{message}</p>}
     </section>
   );
 }

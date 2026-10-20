@@ -1,34 +1,44 @@
-import { useState } from "react";
-import CourseCatalog from "./pages/CourseCatalog";
-import CourseDetail from "./pages/CourseDetail";
-import StudentDashboard from "./pages/StudentDashboard";
-import InstructorCourseBuilder from "./pages/InstructorCourseBuilder";
-import "./App.css";
 
-const API = "http://localhost:5000/api";
+import { useState } from 'react';
+import CourseCatalog from './pages/CourseCatalog';
+import CourseDetail from './pages/CourseDetail';
+import StudentDashboard from './pages/StudentDashboard';
+import LearningPage from './pages/LearningPage';
+import InstructorCourseBuilder from './pages/InstructorCourseBuilder';
+import './App.css';
+
+const API = `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api`;
+const USE_MOCK = import.meta.env.VITE_USE_MOCK === 'true';
+
+function getSavedUser() {
+  try {
+    return JSON.parse(sessionStorage.getItem('axleroUser')) || null;
+  } catch {
+    return null;
+  }
+}
 
 export default function App() {
-  const [page, setPage] = useState("courses");
+  const [page, setPage] = useState('courses');
   const [selectedCourse, setSelectedCourse] = useState(null);
-  const [user, setUser] = useState(() => {
-    try {
-      return JSON.parse(sessionStorage.getItem("axleroUser")) || null;
-    } catch {
-      return null;
-    }
-  });
-  const [authMode, setAuthMode] = useState("login");
-  const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [role, setRole] = useState("student");
+  const [user, setUser] = useState(getSavedUser);
+  const [authMode, setAuthMode] = useState('login');
+  const [name, setName] = useState('');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [role, setRole] = useState('student');
   const [authLoading, setAuthLoading] = useState(false);
-  const [authMessage, setAuthMessage] = useState("");
-  const [authError, setAuthError] = useState("");
+  const [authMessage, setAuthMessage] = useState('');
+  const [authError, setAuthError] = useState('');
 
   function openCourse(course) {
     setSelectedCourse(course);
-    setPage("detail");
+    setPage('detail');
+  }
+
+  function openLearning(course) {
+    setSelectedCourse(course);
+    setPage('learning');
   }
 
   function showPage(nextPage) {
@@ -38,58 +48,89 @@ export default function App() {
 
   async function handleAuth(event) {
     event.preventDefault();
-    setAuthMessage("");
-    setAuthError("");
+    setAuthMessage('');
+    setAuthError('');
     setAuthLoading(true);
 
     try {
+      const normalizedEmail = email.trim().toLowerCase();
+
+      if (USE_MOCK) {
+        if (authMode === 'register') {
+          setAuthMessage('Demo registration successful! You can now log in.');
+          setAuthMode('login');
+          setPassword('');
+          return;
+        }
+
+        const mockUser = {
+          id: 'mock-user',
+          name: name.trim() || normalizedEmail.split('@')[0],
+          email: normalizedEmail,
+          role,
+        };
+
+        sessionStorage.setItem('axleroToken', 'mock-demo-token');
+        sessionStorage.setItem('axleroUser', JSON.stringify(mockUser));
+
+        setUser(mockUser);
+        setPassword('');
+        setPage('courses');
+        return;
+      }
+
       const endpoint =
-        authMode === "register" ? "/auth/register" : "/auth/login";
+        authMode === 'register' ? '/auth/register' : '/auth/login';
 
       const payload =
-        authMode === "register"
-          ? { name, email, password, role }
-          : { email, password };
+        authMode === 'register'
+          ? { name: name.trim(), email: normalizedEmail, password, role }
+          : { email: normalizedEmail, password };
 
       const response = await fetch(`${API}${endpoint}`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
       });
 
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.message || "Authentication failed");
+        throw new Error(data.message || 'Authentication failed.');
       }
 
-      if (authMode === "register") {
-        setAuthMessage("Registration successful. Please log in.");
-        setAuthMode("login");
-        setPassword("");
+      if (authMode === 'register') {
+        setAuthMessage('Registration successful. Please log in.');
+        setAuthMode('login');
+        setPassword('');
         return;
       }
 
-      sessionStorage.setItem("axleroToken", data.token);
-      sessionStorage.setItem("axleroUser", JSON.stringify(data.user));
+      if (!data.token || !data.user) {
+        throw new Error('The server returned an invalid login response.');
+      }
+
+      sessionStorage.setItem('axleroToken', data.token);
+      sessionStorage.setItem('axleroUser', JSON.stringify(data.user));
+
       setUser(data.user);
-      setPassword("");
-      setAuthMessage("");
-      setPage("courses");
+      setPassword('');
+      setPage('courses');
     } catch (err) {
-      setAuthError(err.message || "Unable to connect to the server.");
+      setAuthError(err.message || 'Unable to connect to the server.');
     } finally {
       setAuthLoading(false);
     }
   }
 
   function logout() {
-    sessionStorage.removeItem("axleroToken");
-    sessionStorage.removeItem("axleroUser");
+    sessionStorage.removeItem('axleroToken');
+    sessionStorage.removeItem('axleroUser');
     setUser(null);
     setSelectedCourse(null);
-    setPage("courses");
-    setAuthMessage("You have logged out.");
+    setPage('courses');
+    setAuthMessage('');
+    setAuthError('');
   }
 
   return (
@@ -97,17 +138,17 @@ export default function App() {
       <header className="lms-header">
         <h1>Axlero LMS</h1>
 
-        <nav aria-label="Student navigation">
-          <button type="button" onClick={() => showPage("courses")}>
+        <nav aria-label="Main navigation">
+          <button type="button" onClick={() => showPage('courses')}>
             Course Catalog
           </button>
 
-          <button type="button" onClick={() => showPage("dashboard")}>
+          <button type="button" onClick={() => showPage('dashboard')}>
             My Learning
           </button>
 
-          {user?.role === "instructor" && (
-            <button type="button" onClick={() => showPage("instructor")}>
+          {user?.role === 'instructor' && (
+            <button type="button" onClick={() => showPage('instructor')}>
               Create Course
             </button>
           )}
@@ -116,10 +157,10 @@ export default function App() {
             <button
               type="button"
               onClick={() => {
-                setAuthMode("login");
-                setAuthError("");
-                setAuthMessage("");
-                showPage("auth");
+                setAuthMode('login');
+                setAuthError('');
+                setAuthMessage('');
+                showPage('auth');
               }}
             >
               Login / Register
@@ -133,12 +174,12 @@ export default function App() {
       </header>
 
       <main>
-        {page === "auth" && (
+        {page === 'auth' && (
           <section className="student-page auth-panel">
-            <h2>{authMode === "login" ? "Login" : "Create Account"}</h2>
+            <h2>{authMode === 'login' ? 'Login' : 'Create Account'}</h2>
 
             <form onSubmit={handleAuth}>
-              {authMode === "register" && (
+              {authMode === 'register' && (
                 <>
                   <label htmlFor="auth-name">Full name</label>
                   <input
@@ -185,45 +226,62 @@ export default function App() {
 
               <button type="submit" disabled={authLoading}>
                 {authLoading
-                  ? "Please wait..."
-                  : authMode === "login"
-                    ? "Login"
-                    : "Register"}
+                  ? 'Please wait...'
+                  : authMode === 'login'
+                    ? 'Login'
+                    : 'Register'}
               </button>
             </form>
 
             <p>
-              {authMode === "login"
+              {authMode === 'login'
                 ? "Don't have an account?"
-                : "Already have an account?"}{" "}
+                : 'Already have an account?'}{' '}
               <button
                 type="button"
                 onClick={() => {
-                  setAuthMode(authMode === "login" ? "register" : "login");
-                  setAuthError("");
-                  setAuthMessage("");
+                  setAuthMode(authMode === 'login' ? 'register' : 'login');
+                  setAuthError('');
+                  setAuthMessage('');
                 }}
               >
-                {authMode === "login" ? "Register" : "Login"}
+                {authMode === 'login' ? 'Register' : 'Login'}
               </button>
             </p>
+
+            {USE_MOCK && (
+              <p>
+                Demo mode: authentication is simulated. No real account is
+                created.
+              </p>
+            )}
           </section>
         )}
 
-        {page === "courses" && <CourseCatalog onSelectCourse={openCourse} />}
+        {page === 'courses' && (
+          <CourseCatalog onSelectCourse={openCourse} />
+        )}
 
-        {page === "dashboard" && (
+        {page === 'dashboard' && (
           <StudentDashboard onSelectCourse={openCourse} />
         )}
 
-        {page === "instructor" && user?.role === "instructor" && (
+        {page === 'instructor' && user?.role === 'instructor' && (
           <InstructorCourseBuilder />
         )}
 
-        {page === "detail" && selectedCourse && (
+        {page === 'detail' && selectedCourse && (
           <CourseDetail
             course={selectedCourse}
-            onBack={() => showPage("courses")}
+            onBack={() => showPage('courses')}
+            onContinue={() => openLearning(selectedCourse)}
+          />
+        )}
+
+        {page === 'learning' && selectedCourse && (
+          <LearningPage
+            course={selectedCourse}
+            onBack={() => showPage('dashboard')}
           />
         )}
       </main>

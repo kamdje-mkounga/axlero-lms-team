@@ -1,251 +1,153 @@
 
 import { useEffect, useState } from 'react';
-
-const API = 'http://localhost:5000/api';
+import { getMyEnrollments } from '../api/courseApi';
 
 export default function StudentDashboard({ onSelectCourse }) {
   const [enrollments, setEnrollments] = useState([]);
-  const [lessonsByCourse, setLessonsByCourse] = useState({});
-  const [progressByCourse, setProgressByCourse] = useState({});
   const [loading, setLoading] = useState(true);
-  const [activeCourse, setActiveCourse] = useState('');
-  const [busyLesson, setBusyLesson] = useState('');
   const [error, setError] = useState('');
-  const [message, setMessage] = useState('');
-
-  async function apiRequest(path, options = {}) {
-    const token = sessionStorage.getItem('axleroToken');
-
-    const response = await fetch(`${API}${path}`, {
-      ...options,
-      headers: {
-        ...(options.headers || {}),
-        ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      },
-    });
-
-    const data = await response.json();
-
-    if (!response.ok) {
-      throw new Error(data.message || 'Request failed');
-    }
-
-    return data;
-  }
 
   useEffect(() => {
-    let cancelled = false;
+    let active = true;
 
-    async function fetchMyLearning() {
-      const token = sessionStorage.getItem('axleroToken');
-
-      if (!token) {
-        setError('Please log in to view your learning dashboard.');
-        setLoading(false);
-        return;
-      }
+    async function loadEnrollments() {
+      setLoading(true);
+      setError('');
 
       try {
-        const data = await apiRequest('/enrollments/my-learning');
+        const data = await getMyEnrollments();
 
-        if (!cancelled) {
-          setEnrollments(data.enrollments || []);
+        if (active) {
+          setEnrollments(
+            Array.isArray(data) ? data : []
+          );
         }
       } catch (err) {
-        if (!cancelled) setError(err.message);
+        if (active) {
+          setError(
+            err.message || 'Unable to load your enrolled courses.'
+          );
+        }
       } finally {
-        if (!cancelled) setLoading(false);
+        if (active) {
+          setLoading(false);
+        }
       }
     }
 
-    fetchMyLearning();
+    loadEnrollments();
 
     return () => {
-      cancelled = true;
+      active = false;
     };
   }, []);
-
-  async function toggleLessons(courseId) {
-    if (activeCourse === courseId) {
-      setActiveCourse('');
-      return;
-    }
-
-    setActiveCourse(courseId);
-    setError('');
-    setMessage('');
-
-    if (lessonsByCourse[courseId]) return;
-
-    try {
-      const [lessonData, progressData] = await Promise.all([
-        apiRequest(`/courses/${courseId}/lessons`),
-        apiRequest(`/progress/${courseId}`),
-      ]);
-
-      setLessonsByCourse((prev) => ({
-        ...prev,
-        [courseId]: lessonData.lessons || [],
-      }));
-
-      setProgressByCourse((prev) => ({
-        ...prev,
-        [courseId]: {
-          completedLessons: (progressData.completedLessons || []).map(
-            (item) => String(item?._id || item)
-          ),
-          totalLessons: progressData.totalLessons ?? 0,
-          completedCount: progressData.completedCount ?? 0,
-          percentage: progressData.percentage ?? 0,
-        },
-      }));
-    } catch (err) {
-      setError(err.message);
-    }
-  }
-
-  async function completeLesson(courseId, lessonId) {
-    setBusyLesson(lessonId);
-    setError('');
-    setMessage('');
-
-    try {
-      await apiRequest(
-        `/progress/${courseId}/complete/${lessonId}`,
-        { method: 'POST' }
-      );
-
-      const [lessonData, progressData] = await Promise.all([
-        apiRequest(`/courses/${courseId}/lessons`),
-        apiRequest(`/progress/${courseId}`),
-      ]);
-
-      setLessonsByCourse((prev) => ({
-        ...prev,
-        [courseId]: lessonData.lessons || [],
-      }));
-
-      setProgressByCourse((prev) => ({
-        ...prev,
-        [courseId]: {
-          completedLessons: (progressData.completedLessons || []).map(
-            (item) => String(item?._id || item)
-          ),
-          totalLessons: progressData.totalLessons ?? 0,
-          completedCount: progressData.completedCount ?? 0,
-          percentage: progressData.percentage ?? 0,
-        },
-      }));
-
-      setMessage('Lesson marked as completed!');
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setBusyLesson('');
-    }
-  }
 
   return (
     <section className="student-page">
       <h2>My Learning Dashboard</h2>
-      <p>View your enrolled courses and continue learning.</p>
 
-      {loading && <p>Loading your courses...</p>}
-      {error && <p role="alert">{error}</p>}
-      {message && <p role="status">{message}</p>}
+      <p>
+        View your enrolled courses and continue learning.
+      </p>
 
-      {!loading && !error && enrollments.length === 0 && (
-        <p>You haven't enrolled in any courses yet.</p>
+      {loading && (
+        <p role="status">Loading your courses...</p>
       )}
 
-      <div className="student-course-grid">
-        {enrollments.map((enrollment) => {
-          const course = enrollment.course;
-          if (!course) return null;
+      {error && (
+        <p role="alert">{error}</p>
+      )}
 
-          const lessons = lessonsByCourse[course._id] || [];
-          const progress = progressByCourse[course._id];
-          const completed = progress?.completedLessons || [];
+      {!loading && !error && enrollments.length === 0 && (
+        <p>
+          You haven't enrolled in any courses yet.
+          Visit the Course Catalog to explore courses.
+        </p>
+      )}
 
-          return (
-            <article className="student-course-card" key={enrollment._id}>
-              <h3>{course.title}</h3>
-              <p>{course.description || 'No description available.'}</p>
-              <p>Category: {course.category || 'General'}</p>
+      {!loading && !error && enrollments.length > 0 && (
+        <div className="student-course-grid">
+          {enrollments.map((enrollment, index) => {
+            const course = enrollment.course;
 
-              <button
-                type="button"
-                onClick={() => onSelectCourse?.(course)}
+            if (!course) return null;
+            const courseId =
+  course._id || course.id || enrollment.courseId || course.title;
+
+const savedLessons = (() => {
+  try {
+    return JSON.parse(
+      localStorage.getItem(`axlero-progress-${courseId}`) || '[]'
+    );
+  } catch {
+    return [];
+  }
+})();
+
+const localProgress = Math.round(
+  (savedLessons.length / 4) * 100
+);
+
+const progress = Math.max(
+  Number(enrollment.progress) || 0,
+  localProgress
+);
+
+            const safeProgress = Math.min(
+              100,
+              Math.max(0, progress)
+            );
+
+            return (
+              <article
+                className="student-course-card"
+                key={
+                  enrollment._id ||
+                  enrollment.courseId ||
+                  course._id ||
+                  index
+                }
               >
-                Open Course Details
-              </button>
+                <h3>{course.title || 'Untitled Course'}</h3>
 
-              <button
-                type="button"
-                onClick={() => toggleLessons(course._id)}
-              >
-                {activeCourse === course._id ? 'Hide Lessons' : 'View Lessons & Progress'}
-              </button>
+                <p>
+                  {course.description ||
+                    'No description available.'}
+                </p>
 
-              {activeCourse === course._id && (
-                <div className="lesson-panel">
-                  {progress && (
-                    <>
-                      <h4>Course Progress: {progress.percentage}%</h4>
-                      <progress
-                        value={progress.percentage}
-                        max="100"
-                        style={{ width: '100%', height: '14px' }}
-                      />
-                      <p>
-                        {progress.completedCount} of {progress.totalLessons} lessons completed
-                      </p>
-                    </>
-                  )}
+                <p>
+                  Category: {course.category || 'General'}
+                </p>
 
-                  {lessons.length === 0 && (
-                    <p>No lessons available yet.</p>
-                  )}
+                <h4>Course Progress: {safeProgress}%</h4>
 
-                  {lessons.map((lesson, index) => {
-                    const isCompleted = completed.includes(String(lesson._id));
+                <progress
+                  value={safeProgress}
+                  max="100"
+                  aria-label={`Course progress: ${safeProgress}%`}
+                  style={{
+                    width: '100%',
+                    height: '14px',
+                  }}
+                />
 
-                    return (
-                      <article className="lesson-item" key={lesson._id}>
-                        <h4>{index + 1}. {lesson.title}</h4>
+                <p>
+                  {safeProgress === 100
+                    ? 'Course completed!'
+                    : 'Keep learning to complete this course.'}
+                </p>
 
-                        {lesson.type === 'video' && lesson.videoUrl ? (
-                          <a
-                            href={lesson.videoUrl}
-                            target="_blank"
-                            rel="noreferrer"
-                          >
-                            Open Video
-                          </a>
-                        ) : (
-                          <p>{lesson.content || 'No lesson content available.'}</p>
-                        )}
-
-                        <button
-                          type="button"
-                          disabled={isCompleted || busyLesson === lesson._id}
-                          onClick={() => completeLesson(course._id, lesson._id)}
-                        >
-                          {isCompleted
-                            ? 'Completed'
-                            : busyLesson === lesson._id
-                              ? 'Saving...'
-                              : 'Mark as Completed'}
-                        </button>
-                      </article>
-                    );
-                  })}
-                </div>
-              )}
-            </article>
-          );
-        })}
-      </div>
+                <button
+                  type="button"
+                  onClick={() => onSelectCourse?.(course)}
+                >
+                  Continue Learning
+                </button>
+              </article>
+            );
+          })}
+        </div>
+      )}
     </section>
   );
 }
