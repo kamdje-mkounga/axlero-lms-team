@@ -4,6 +4,7 @@ import CourseCatalog from './pages/CourseCatalog';
 import CourseDetail from './pages/CourseDetail';
 import StudentDashboard from './pages/StudentDashboard';
 import LearningPage from './pages/LearningPage';
+import InstructorCourseBuilder from './pages/InstructorCourseBuilder';
 import './App.css';
 
 const API = `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api`;
@@ -36,10 +37,10 @@ export default function App() {
   }
 
   function openLearning(course) {
-  console.log('Continue Learning clicked:', course);
-  setSelectedCourse(course);
-  setPage('learning');
-}
+    setSelectedCourse(course);
+    setPage('learning');
+  }
+
   function showPage(nextPage) {
     setSelectedCourse(null);
     setPage(nextPage);
@@ -56,26 +57,21 @@ export default function App() {
 
       if (USE_MOCK) {
         if (authMode === 'register') {
-          setAuthMessage(
-            'Demo registration successful! You can now log in.'
-          );
+          setAuthMessage('Demo registration successful! You can now log in.');
           setAuthMode('login');
           setPassword('');
           return;
         }
 
         const mockUser = {
-          id: 'mock-student',
+          id: 'mock-user',
           name: name.trim() || normalizedEmail.split('@')[0],
           email: normalizedEmail,
-          role: 'student',
+          role,
         };
 
         sessionStorage.setItem('axleroToken', 'mock-demo-token');
-        sessionStorage.setItem(
-          'axleroUser',
-          JSON.stringify(mockUser)
-        );
+        sessionStorage.setItem('axleroUser', JSON.stringify(mockUser));
 
         setUser(mockUser);
         setPassword('');
@@ -142,7 +138,7 @@ export default function App() {
       <header className="lms-header">
         <h1>Axlero LMS</h1>
 
-        <nav aria-label="Student navigation">
+        <nav aria-label="Main navigation">
           <button type="button" onClick={() => showPage('courses')}>
             Course Catalog
           </button>
@@ -150,6 +146,12 @@ export default function App() {
           <button type="button" onClick={() => showPage('dashboard')}>
             My Learning
           </button>
+
+          {user?.role === 'instructor' && (
+            <button type="button" onClick={() => showPage('instructor')}>
+              Create Course
+            </button>
+          )}
 
           {!user ? (
             <button
@@ -238,9 +240,7 @@ export default function App() {
               <button
                 type="button"
                 onClick={() => {
-                  setAuthMode(
-                    authMode === 'login' ? 'register' : 'login'
-                  );
+                  setAuthMode(authMode === 'login' ? 'register' : 'login');
                   setAuthError('');
                   setAuthMessage('');
                 }}
@@ -251,8 +251,8 @@ export default function App() {
 
             {USE_MOCK && (
               <p>
-                Demo mode: authentication is simulated. No real account
-                is created.
+                Demo mode: authentication is simulated. No real account is
+                created.
               </p>
             )}
           </section>
@@ -264,6 +264,10 @@ export default function App() {
 
         {page === 'dashboard' && (
           <StudentDashboard onSelectCourse={openCourse} />
+        )}
+
+        {page === 'instructor' && user?.role === 'instructor' && (
+          <InstructorCourseBuilder />
         )}
 
         {page === 'detail' && selectedCourse && (
