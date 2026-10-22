@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import CourseCatalog from './pages/CourseCatalog';
 import CourseDetail from './pages/CourseDetail';
@@ -106,14 +105,17 @@ export default function App() {
         return;
       }
 
-      if (!data.token || !data.user) {
+      // Extraction sécurisée qu'elle vienne de data.data ou de data direct
+      const resultData = data.data || data;
+
+      if (!resultData.token || !resultData.user) {
         throw new Error('The server returned an invalid login response.');
       }
 
-      sessionStorage.setItem('axleroToken', data.token);
-      sessionStorage.setItem('axleroUser', JSON.stringify(data.user));
+      sessionStorage.setItem('axleroToken', resultData.token);
+      sessionStorage.setItem('axleroUser', JSON.stringify(resultData.user));
 
-      setUser(data.user);
+      setUser(resultData.user);
       setPassword('');
       setPage('courses');
     } catch (err) {
