@@ -1,23 +1,7 @@
-
 import { mockCourses, mockEnrollments } from './mockData';
 
 const API_URL = `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api`;
 const USE_MOCK = import.meta.env.VITE_USE_MOCK === 'true';
-
-async function request(url, options = {}) {
-  if (USE_MOCK) {
-    return mockRequest(url, options);
-  }
-
-  const response = await fetch(`${API_URL}${url}`, options);
-  const data = await response.json();
-
-  if (!response.ok) {
-    throw new Error(data.message || 'Something went wrong');
-  }
-
-  return data;
-}
 
 function authHeaders() {
   const token = sessionStorage.getItem('axleroToken');
@@ -25,6 +9,32 @@ function authHeaders() {
   return token
     ? { Authorization: `Bearer ${token}` }
     : {};
+}
+
+async function request(url, options = {}) {
+  if (USE_MOCK) {
+    return mockRequest(url, options);
+  }
+
+  // Automatically combine default headers, auth headers, and custom options
+  const headers = {
+    'Content-Type': 'application/json',
+    ...authHeaders(),
+    ...(options.headers || {}),
+  };
+
+  const response = await fetch(`${API_URL}${url}`, {
+    ...options,
+    headers,
+  });
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    throw new Error(data.message || 'Something went wrong');
+  }
+
+  return data;
 }
 
 async function mockRequest(url, options = {}) {
@@ -107,10 +117,6 @@ export async function getCourseById(id) {
 export async function enrollInCourse(id) {
   return request(`/courses/${id}/enroll`, {
     method: 'POST',
-    headers: {
-      ...authHeaders(),
-      'Content-Type': 'application/json',
-    },
   });
 }
 
