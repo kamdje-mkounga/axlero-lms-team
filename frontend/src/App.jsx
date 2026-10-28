@@ -269,7 +269,9 @@ export default function App() {
         )}
 
         {page === 'instructor' && user?.role === 'instructor' && (
-          <InstructorCourseBuilder />
+          <InstructorCourseBuilder
+            onNavigateToCatalog={() => showPage('courses')}
+          />
         )}
 
         {page === 'detail' && selectedCourse && (
