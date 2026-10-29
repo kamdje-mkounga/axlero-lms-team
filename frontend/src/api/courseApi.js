@@ -1,5 +1,6 @@
 import { mockCourses, mockEnrollments } from './mockData';
 
+
 const API_URL = `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api`;
 const USE_MOCK = import.meta.env.VITE_USE_MOCK === 'true';
 
@@ -60,12 +61,67 @@ async function mockRequest(url, options = {}) {
     return { course };
   }
 
-  // POST /api/courses/:id/enroll
-  const enrollMatch = url.match(/^\/courses\/([^/]+)\/enroll$/);
+  // POST /courses
+  if (url === '/courses' && method === 'POST') {
+    const newCourse = {
+      _id: `course-${Date.now()}`,
+      id: `course-${Date.now()}`,
+      ...JSON.parse(options.body || '{}'),
+      createdAt: new Date().toISOString(),
+    };
+    mockCourses.push(newCourse);
+    return {
+      success: true,
+      message: 'Course created successfully',
+      data: newCourse,
+    };
+  }
 
-  if (enrollMatch && method === 'POST') {
+  // PUT /courses/:id
+  const updateMatch = url.match(/^\/courses\/([^/]+)$/);
+  if (updateMatch && method === 'PUT') {
+    const courseIndex = mockCourses.findIndex(
+      (item) => (item.id || item._id) === updateMatch[1]
+    );
+    if (courseIndex === -1) {
+      throw new Error('Course not found');
+    }
+    const updates = JSON.parse(options.body || '{}');
+    mockCourses[courseIndex] = {
+      ...mockCourses[courseIndex],
+      ...updates,
+      updatedAt: new Date().toISOString(),
+    };
+    return {
+      success: true,
+      message: 'Course updated successfully',
+      data: mockCourses[courseIndex],
+    };
+  }
+
+  // DELETE /courses/:id
+  if (updateMatch && method === 'DELETE') {
+    const courseIndex = mockCourses.findIndex(
+      (item) => (item.id || item._id) === updateMatch[1]
+    );
+    if (courseIndex === -1) {
+      throw new Error('Course not found');
+    }
+    mockCourses.splice(courseIndex, 1);
+    return {
+      success: true,
+      message: 'Course deleted successfully',
+    };
+  }
+
+  // POST /api/enrollments or legacy POST /api/courses/:id/enroll
+  const enrollMatch = url.match(/^\/courses\/([^/]+)\/enroll$/);
+  if ((url === '/enrollments' || enrollMatch) && method === 'POST') {
+    const body = options.body ? JSON.parse(options.body) : {};
+    const courseId = body.courseId || (enrollMatch ? enrollMatch[1] : null);
+
     const course = mockCourses.find(
-      (item) => item._id === enrollMatch[1]
+      (item) => (item._id || item.id) === courseId
     );
 
     if (!course) {
@@ -74,7 +130,7 @@ async function mockRequest(url, options = {}) {
 
     const alreadyEnrolled = mockEnrollments.some(
       (item) =>
-        item.courseId === course._id &&
+        (item.courseId === courseId || item.course?._id === courseId || item.course?.id === courseId) &&
         item.userId === 'mock-student'
     );
 
@@ -83,14 +139,17 @@ async function mockRequest(url, options = {}) {
     }
 
     mockEnrollments.push({
-      _id: `enrollment-${course._id}`,
-      courseId: course._id,
+      _id: `enrollment-${courseId}`,
+      courseId,
       userId: 'mock-student',
       course,
       progress: 0,
     });
 
-    return { message: 'Successfully enrolled in the course!' };
+    return {
+      success: true,
+      message: 'Successfully enrolled in course',
+    };
   }
 
   // GET /api/enrollments/me
@@ -106,21 +165,50 @@ async function mockRequest(url, options = {}) {
 }
 
 export async function getCourses() {
-  return request('/courses');
+  const data = await request('/courses');
+  return {
+    courses: data.data || data.courses || [],
+    ...data,
+  };
 }
 
 export async function getCourseById(id) {
   const data = await request(`/courses/${id}`);
-  return data.course;
+  return data.data || data.course;
 }
 
 export async function enrollInCourse(id) {
-  return request(`/courses/${id}/enroll`, {
+  return request('/enrollments', {
     method: 'POST',
+    body: JSON.stringify({ courseId: id }),
   });
 }
 
 export async function getMyEnrollments() {
   const data = await request('/enrollments/me');
-  return data.enrollments || [];
+  return data.data || data.enrollments || [];
+}
+
+export async function createCourse(courseData) {
+  const data = await request('/courses', {
+    method: 'POST',
+    body: JSON.stringify(courseData),
+  });
+
+  return data.data || data;
+}
+
+export async function updateCourse(id, courseData) {
+  const data = await request(`/courses/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify(courseData),
+  });
+
+  return data.data || data;
+}
+
+export async function deleteCourse(id) {
+  return request(`/courses/${id}`, {
+    method: 'DELETE',
+  });
 }
