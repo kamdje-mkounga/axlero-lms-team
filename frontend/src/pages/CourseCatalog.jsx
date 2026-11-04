@@ -15,7 +15,12 @@ export default function CourseCatalog({ onSelectCourse }) {
 
         const data = await getCourses();
 
-        setCourses(data.courses || []);
+        // Handle various backend response shapes safely
+        const courseList = Array.isArray(data)
+          ? data
+          : data.courses || data.data || [];
+
+        setCourses(courseList);
       } catch (err) {
         setError(err.message || 'Unable to connect to the server.');
       } finally {
@@ -66,7 +71,7 @@ export default function CourseCatalog({ onSelectCourse }) {
 
       <div className="student-course-grid">
         {courses.map((course) => (
-          <article className="student-course-card" key={course._id}>
+          <article className="student-course-card" key={course._id || course.id}>
             <span className="course-category">
               {course.category || 'General'}
             </span>
@@ -89,10 +94,10 @@ export default function CourseCatalog({ onSelectCourse }) {
 
               <button
                 type="button"
-                onClick={() => handleEnroll(course._id)}
-                disabled={enrollingCourse === course._id}
+                onClick={() => handleEnroll(course._id || course.id)}
+                disabled={enrollingCourse === (course._id || course.id)}
               >
-                {enrollingCourse === course._id
+                {enrollingCourse === (course._id || course.id)
                   ? 'Enrolling...'
                   : 'Enroll Now'}
               </button>

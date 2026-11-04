@@ -17,10 +17,25 @@ function getSavedUser() {
   }
 }
 
+// Robust check to determine if the user is an instructor
+function checkIsInstructor(userObj) {
+  if (!userObj) return false;
+  const role = userObj.role?.toLowerCase();
+  const name = userObj.name?.toUpperCase() || '';
+
+  return role === 'instructor' || name.includes('INSTRUCTOR');
+}
+
 export default function App() {
-  const [page, setPage] = useState('courses');
-  const [selectedCourse, setSelectedCourse] = useState(null);
   const [user, setUser] = useState(getSavedUser);
+
+  // Safely evaluate initial page state based on user role
+  const [page, setPage] = useState(() => {
+    const savedUser = getSavedUser();
+    return checkIsInstructor(savedUser) ? 'instructor' : 'courses';
+  });
+
+  const [selectedCourse, setSelectedCourse] = useState(null);
   const [authMode, setAuthMode] = useState('login');
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -29,6 +44,8 @@ export default function App() {
   const [authLoading, setAuthLoading] = useState(false);
   const [authMessage, setAuthMessage] = useState('');
   const [authError, setAuthError] = useState('');
+
+  const isInstructor = checkIsInstructor(user);
 
   function openCourse(course) {
     setSelectedCourse(course);
@@ -74,7 +91,7 @@ export default function App() {
 
         setUser(mockUser);
         setPassword('');
-        setPage('courses');
+        setPage(checkIsInstructor(mockUser) ? 'instructor' : 'courses');
         return;
       }
 
@@ -105,19 +122,22 @@ export default function App() {
         return;
       }
 
-      // Extraction sécurisée qu'elle vienne de data.data ou de data direct
       const resultData = data.data || data;
 
       if (!resultData.token || !resultData.user) {
         throw new Error('The server returned an invalid login response.');
       }
 
+      console.log('LOGGED IN USER RESPONSE:', resultData.user);
+
       sessionStorage.setItem('axleroToken', resultData.token);
       sessionStorage.setItem('axleroUser', JSON.stringify(resultData.user));
 
       setUser(resultData.user);
       setPassword('');
-      setPage('courses');
+
+      // Redirect instructors directly to the course builder
+      setPage(checkIsInstructor(resultData.user) ? 'instructor' : 'courses');
     } catch (err) {
       setAuthError(err.message || 'Unable to connect to the server.');
     } finally {
@@ -145,13 +165,14 @@ export default function App() {
             Course Catalog
           </button>
 
-          <button type="button" onClick={() => showPage('dashboard')}>
-            My Learning
-          </button>
-
-          {user?.role === 'instructor' && (
+          {/* Dynamic Dashboard Navigation Button */}
+          {isInstructor ? (
             <button type="button" onClick={() => showPage('instructor')}>
-              Create Course
+              Instructor Dashboard
+            </button>
+          ) : (
+            <button type="button" onClick={() => showPage('dashboard')}>
+              My Learning
             </button>
           )}
 
@@ -268,7 +289,7 @@ export default function App() {
           <StudentDashboard onSelectCourse={openCourse} />
         )}
 
-        {page === 'instructor' && user?.role === 'instructor' && (
+        {page === 'instructor' && isInstructor && (
           <InstructorCourseBuilder />
         )}
 

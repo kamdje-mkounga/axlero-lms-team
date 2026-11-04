@@ -39,10 +39,23 @@ async function request(url, options = {}) {
 
 async function mockRequest(url, options = {}) {
   const method = options.method || 'GET';
+  const body = options.body ? JSON.parse(options.body) : {};
 
   // GET /api/courses
   if (url === '/courses' && method === 'GET') {
     return { courses: mockCourses };
+  }
+
+  // POST /api/courses (Create Course)
+  if (url === '/courses' && method === 'POST') {
+    const newCourse = {
+      _id: `course-${Date.now()}`,
+      ...body,
+      status: body.status || 'published',
+      createdAt: new Date().toISOString(),
+    };
+    mockCourses.push(newCourse);
+    return { message: 'Course created successfully', course: newCourse };
   }
 
   // GET /api/courses/:id
@@ -105,6 +118,10 @@ async function mockRequest(url, options = {}) {
   throw new Error(`Mock route not found: ${method} ${url}`);
 }
 
+// ==========================================
+// EXPORTED API FUNCTIONS
+// ==========================================
+
 export async function getCourses() {
   return request('/courses');
 }
@@ -114,9 +131,24 @@ export async function getCourseById(id) {
   return data.course;
 }
 
-export async function enrollInCourse(id) {
-  return request(`/courses/${id}/enroll`, {
+export async function createCourse(courseData) {
+  return request('/courses', {
     method: 'POST',
+    body: JSON.stringify(courseData),
+  });
+}
+
+export async function updateCourse(id, courseData) {
+  return request(`/courses/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify(courseData),
+  });
+}
+
+export async function enrollInCourse(courseId) {
+  return request('/enrollments', {
+    method: 'POST',
+    body: JSON.stringify({ courseId }),
   });
 }
 

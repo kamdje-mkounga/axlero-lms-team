@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from 'react';
 import { getMyEnrollments } from '../api/courseApi';
 
@@ -16,11 +15,14 @@ export default function StudentDashboard({ onSelectCourse }) {
 
       try {
         const data = await getMyEnrollments();
+        console.log('Enrollments response:', data);
 
         if (active) {
-          setEnrollments(
-            Array.isArray(data) ? data : []
-          );
+          const enrollmentList = Array.isArray(data)
+            ? data
+            : data.enrollments || data.data || [];
+
+          setEnrollments(enrollmentList);
         }
       } catch (err) {
         if (active) {
@@ -72,26 +74,26 @@ export default function StudentDashboard({ onSelectCourse }) {
 
             if (!course) return null;
             const courseId =
-  course._id || course.id || enrollment.courseId || course.title;
+              course._id || course.id || enrollment.courseId || course.title;
 
-const savedLessons = (() => {
-  try {
-    return JSON.parse(
-      localStorage.getItem(`axlero-progress-${courseId}`) || '[]'
-    );
-  } catch {
-    return [];
-  }
-})();
+            const savedLessons = (() => {
+              try {
+                return JSON.parse(
+                  localStorage.getItem(`axlero-progress-${courseId}`) || '[]'
+                );
+              } catch {
+                return [];
+              }
+            })();
 
-const localProgress = Math.round(
-  (savedLessons.length / 4) * 100
-);
+            const localProgress = Math.round(
+              (savedLessons.length / 4) * 100
+            );
 
-const progress = Math.max(
-  Number(enrollment.progress) || 0,
-  localProgress
-);
+            const progress = Math.max(
+              Number(enrollment.progress) || 0,
+              localProgress
+            );
 
             const safeProgress = Math.min(
               100,
