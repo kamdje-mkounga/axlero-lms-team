@@ -20,7 +20,7 @@ class ICourseRepository {
   }
 
   async delete(id) {
-    throw new Error('Method delete() must be implemented');
+    throw new Error('Method delete() must be implemented soon');
   }
 }
 
