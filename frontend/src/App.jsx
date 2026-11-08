@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import CourseCatalog from './pages/CourseCatalog';
 import CourseDetail from './pages/CourseDetail';
@@ -49,16 +50,19 @@ export default function App() {
 
   function openCourse(course) {
     setSelectedCourse(course);
+    setSelectedEnrollment(null);
     setPage('detail');
   }
 
-  function openLearning(course) {
+  function openLearning({ course, enrollment }) {
     setSelectedCourse(course);
+    setSelectedEnrollment(enrollment);
     setPage('learning');
   }
 
   function showPage(nextPage) {
     setSelectedCourse(null);
+    setSelectedEnrollment(null);
     setPage(nextPage);
   }
 
@@ -73,7 +77,9 @@ export default function App() {
 
       if (USE_MOCK) {
         if (authMode === 'register') {
-          setAuthMessage('Demo registration successful! You can now log in.');
+          setAuthMessage(
+            'Demo registration successful! You can now log in.'
+          );
           setAuthMode('login');
           setPassword('');
           return;
@@ -87,7 +93,10 @@ export default function App() {
         };
 
         sessionStorage.setItem('axleroToken', 'mock-demo-token');
-        sessionStorage.setItem('axleroUser', JSON.stringify(mockUser));
+        sessionStorage.setItem(
+          'axleroUser',
+          JSON.stringify(mockUser)
+        );
 
         setUser(mockUser);
         setPassword('');
@@ -96,27 +105,43 @@ export default function App() {
       }
 
       const endpoint =
-        authMode === 'register' ? '/auth/register' : '/auth/login';
+        authMode === 'register'
+          ? '/auth/register'
+          : '/auth/login';
 
       const payload =
         authMode === 'register'
-          ? { name: name.trim(), email: normalizedEmail, password, role }
-          : { email: normalizedEmail, password };
+          ? {
+            name: name.trim(),
+            email: normalizedEmail,
+            password,
+            role,
+          }
+          : {
+            email: normalizedEmail,
+            password,
+          };
 
       const response = await fetch(`${API}${endpoint}`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+        },
         body: JSON.stringify(payload),
       });
 
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.message || 'Authentication failed.');
+        throw new Error(
+          data.message || 'Authentication failed.'
+        );
       }
 
       if (authMode === 'register') {
-        setAuthMessage('Registration successful. Please log in.');
+        setAuthMessage(
+          'Registration successful. Please log in.'
+        );
         setAuthMode('login');
         setPassword('');
         return;
@@ -125,7 +150,9 @@ export default function App() {
       const resultData = data.data || data;
 
       if (!resultData.token || !resultData.user) {
-        throw new Error('The server returned an invalid login response.');
+        throw new Error(
+          'The server returned an invalid login response.'
+        );
       }
 
       console.log('LOGGED IN USER RESPONSE:', resultData.user);
@@ -139,7 +166,9 @@ export default function App() {
       // Redirect instructors directly to the course builder
       setPage(checkIsInstructor(resultData.user) ? 'instructor' : 'courses');
     } catch (err) {
-      setAuthError(err.message || 'Unable to connect to the server.');
+      setAuthError(
+        err.message || 'Unable to connect to the server.'
+      );
     } finally {
       setAuthLoading(false);
     }
@@ -148,8 +177,10 @@ export default function App() {
   function logout() {
     sessionStorage.removeItem('axleroToken');
     sessionStorage.removeItem('axleroUser');
+
     setUser(null);
     setSelectedCourse(null);
+    setSelectedEnrollment(null);
     setPage('courses');
     setAuthMessage('');
     setAuthError('');
@@ -161,7 +192,10 @@ export default function App() {
         <h1>Axlero LMS</h1>
 
         <nav aria-label="Main navigation">
-          <button type="button" onClick={() => showPage('courses')}>
+          <button
+            type="button"
+            onClick={() => showPage('courses')}
+          >
             Course Catalog
           </button>
 
@@ -199,55 +233,89 @@ export default function App() {
       <main>
         {page === 'auth' && (
           <section className="student-page auth-panel">
-            <h2>{authMode === 'login' ? 'Login' : 'Create Account'}</h2>
+            <h2>
+              {authMode === 'login'
+                ? 'Login'
+                : 'Create Account'}
+            </h2>
 
             <form onSubmit={handleAuth}>
               {authMode === 'register' && (
                 <>
-                  <label htmlFor="auth-name">Full name</label>
+                  <label htmlFor="auth-name">
+                    Full name
+                  </label>
+
                   <input
                     id="auth-name"
                     type="text"
                     value={name}
-                    onChange={(event) => setName(event.target.value)}
+                    onChange={(event) =>
+                      setName(event.target.value)
+                    }
                     required
                   />
 
-                  <label htmlFor="auth-role">Account type</label>
+                  <label htmlFor="auth-role">
+                    Account type
+                  </label>
+
                   <select
                     id="auth-role"
                     value={role}
-                    onChange={(event) => setRole(event.target.value)}
+                    onChange={(event) =>
+                      setRole(event.target.value)
+                    }
                   >
                     <option value="student">Student</option>
-                    <option value="instructor">Instructor</option>
+                    <option value="instructor">
+                      Instructor
+                    </option>
                   </select>
                 </>
               )}
 
-              <label htmlFor="auth-email">Email</label>
+              <label htmlFor="auth-email">
+                Email
+              </label>
+
               <input
                 id="auth-email"
                 type="email"
                 value={email}
-                onChange={(event) => setEmail(event.target.value)}
+                onChange={(event) =>
+                  setEmail(event.target.value)
+                }
                 required
               />
 
-              <label htmlFor="auth-password">Password</label>
+              <label htmlFor="auth-password">
+                Password
+              </label>
+
               <input
                 id="auth-password"
                 type="password"
                 value={password}
-                onChange={(event) => setPassword(event.target.value)}
+                onChange={(event) =>
+                  setPassword(event.target.value)
+                }
                 minLength={6}
                 required
               />
 
-              {authError && <p role="alert">{authError}</p>}
-              {authMessage && <p role="status">{authMessage}</p>}
+              {authError && (
+                <p role="alert">{authError}</p>
+              )}
 
-              <button type="submit" disabled={authLoading}>
+              {authMessage && (
+                <p role="status">{authMessage}</p>
+              )}
+
+              <button
+                type="submit"
+                disabled={authLoading}
+              >
                 {authLoading
                   ? 'Please wait...'
                   : authMode === 'login'
@@ -260,22 +328,29 @@ export default function App() {
               {authMode === 'login'
                 ? "Don't have an account?"
                 : 'Already have an account?'}{' '}
+
               <button
                 type="button"
                 onClick={() => {
-                  setAuthMode(authMode === 'login' ? 'register' : 'login');
+                  setAuthMode(
+                    authMode === 'login'
+                      ? 'register'
+                      : 'login'
+                  );
                   setAuthError('');
                   setAuthMessage('');
                 }}
               >
-                {authMode === 'login' ? 'Register' : 'Login'}
+                {authMode === 'login'
+                  ? 'Register'
+                  : 'Login'}
               </button>
             </p>
 
             {USE_MOCK && (
               <p>
-                Demo mode: authentication is simulated. No real account is
-                created.
+                Demo mode: authentication is simulated.
+                No real account is created.
               </p>
             )}
           </section>
@@ -297,13 +372,14 @@ export default function App() {
           <CourseDetail
             course={selectedCourse}
             onBack={() => showPage('courses')}
-            onContinue={() => openLearning(selectedCourse)}
+            onContinue={openLearning}
           />
         )}
 
         {page === 'learning' && selectedCourse && (
           <LearningPage
             course={selectedCourse}
+            enrollment={selectedEnrollment}
             onBack={() => showPage('dashboard')}
           />
         )}
