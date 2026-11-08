@@ -1,5 +1,5 @@
-import { useMemo, useState } from "react";
-import { createCourse, updateCourse as updateCourseApi } from "../api/courseApi";
+import { useMemo, useState } from 'react';
+import { createCourse } from '../api/courseApi';
 
 const createId = () =>
   globalThis.crypto?.randomUUID?.() ??
@@ -69,9 +69,9 @@ export default function InstructorCourseBuilder({ onNavigateToCatalog }) {
   const [courseStatus, setCourseStatus] = useState("draft");
   const [errors, setErrors] = useState({});
   const [preview, setPreview] = useState(null);
-  const [message, setMessage] = useState("");
-  const [messageType, setMessageType] = useState("info");
-  const [isSaving, setIsSaving] = useState(false);
+  const [message, setMessage] = useState('');
+  const [messageType, setMessageType] = useState('info');
+  const [saving, setSaving] = useState(false);
 
   const lessonCount = useMemo(
     () => countLessons(course.chapters),
@@ -135,12 +135,12 @@ export default function InstructorCourseBuilder({ onNavigateToCatalog }) {
       chapters: current.chapters.map((chapter) =>
         chapter.id === chapterId
           ? {
-              ...chapter,
-              lessons: chapter.lessons.map((lesson) =>
-                lesson.id === lessonId ? { ...lesson, [field]: value } : lesson,
-              ),
-            }
-          : chapter,
+            ...chapter,
+            lessons: chapter.lessons.map((lesson) =>
+              lesson.id === lessonId ? { ...lesson, [field]: value } : lesson
+            ),
+          }
+          : chapter
       ),
     }));
     clearError(`lesson-${lessonId}`);
@@ -227,9 +227,9 @@ export default function InstructorCourseBuilder({ onNavigateToCatalog }) {
       chapters: current.chapters.map((item) =>
         item.id === chapterId
           ? {
-              ...item,
-              lessons: item.lessons.filter((entry) => entry.id !== lessonId),
-            }
+            ...item,
+            lessons: item.lessons.filter((entry) => entry.id !== lessonId),
+          }
           : item,
       ),
     }));
@@ -243,7 +243,7 @@ export default function InstructorCourseBuilder({ onNavigateToCatalog }) {
     setMessage("");
   }
 
-  function validateCourse() {
+  function validateForm() {
     const nextErrors = {};
 
     if (!course.title.trim()) {
@@ -283,29 +283,16 @@ export default function InstructorCourseBuilder({ onNavigateToCatalog }) {
     });
 
     setErrors(nextErrors);
-
-    if (Object.keys(nextErrors).length > 0) {
-      setMessage("Please fix the highlighted fields before continuing.");
-      setMessageType("error");
-
-      const firstError = document.querySelector(".builder-error");
-      firstError?.scrollIntoView({
-        behavior: "smooth",
-        block: "center",
-      });
-
-      return false;
-    }
-
-    return true;
+    return Object.keys(nextErrors).length === 0;
   }
 
-  function handleSubmit(event) {
+  function handlePreview(event) {
     event.preventDefault();
-
-    setPreview(null);
-
-    if (!validateCourse()) {
+    if (!validateForm()) {
+      setMessage('Please fix the highlighted fields before previewing your course.');
+      setMessageType('error');
+      const firstError = document.querySelector('.builder-error');
+      firstError?.scrollIntoView({ behavior: 'smooth', block: 'center' });
       return;
     }
 
@@ -386,6 +373,49 @@ export default function InstructorCourseBuilder({ onNavigateToCatalog }) {
     }
   }
 
+  async function handleSaveAndPublish(event) {
+    event.preventDefault();
+    if (!validateForm()) {
+      setMessage('Please fix the highlighted fields before publishing your course.');
+      setMessageType('error');
+      const firstError = document.querySelector('.builder-error');
+      firstError?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      return;
+    }
+
+    setSaving(true);
+    setMessage('');
+
+    try {
+      const payload = {
+        title: course.title,
+        description: course.description,
+        category: course.category,
+        level: course.level.toLowerCase(),
+        status: 'published',
+        chapters: course.chapters.map((chapter, chapterIndex) => ({
+          title: chapter.title,
+          order: chapterIndex + 1, // 👈 Starts at 1 instead of 0
+          lessons: chapter.lessons.map((lesson, lessonIndex) => ({
+            title: lesson.title,
+            description: lesson.description,
+            videoUrl: lesson.videoUrl,
+            order: lessonIndex + 1, // 👈 Starts at 1 instead of 0
+          })),
+        })),
+      };
+
+      await createCourse(payload);
+      setMessage('Course successfully published to the backend database!');
+      setMessageType('success');
+    } catch (err) {
+      setMessage(err.message || 'Failed to save course to the backend.');
+      setMessageType('error');
+    } finally {
+      setSaving(false);
+    }
+  }
+
   return (
     <section className="student-page instructor-builder">
       <div className="builder-heading">
@@ -415,7 +445,7 @@ export default function InstructorCourseBuilder({ onNavigateToCatalog }) {
             <strong>Course setup</strong>
             <span>{completion}% complete</span>
           </div>
-          <p>Complete the required fields to generate a preview.</p>
+          <p>Complete the required fields to generate a preview or publish.</p>
         </div>
         <div
           className="builder-progress-track"
@@ -439,7 +469,7 @@ export default function InstructorCourseBuilder({ onNavigateToCatalog }) {
         </div>
       </div>
 
-      <form onSubmit={handleSubmit} noValidate>
+      <form noValidate>
         <section className="builder-card">
           <div className="builder-card-heading">
             <span className="builder-step">01</span>
@@ -770,66 +800,18 @@ export default function InstructorCourseBuilder({ onNavigateToCatalog }) {
           </p>
         )}
 
-        <div className="builder-actions">
-          <p className="builder-actions-note">
-            {courseId
-              ? `Course is saved (ID: ${courseId}). You can update draft, publish, or start a new course.`
-              : "Preview your course, save it as a draft, or publish directly."}
-          </p>
-
-          <div style={{ display: "flex", gap: "10px", flexWrap: "wrap", alignItems: "center" }}>
-            <button
-              type="button"
-              className="builder-primary-button"
-              onClick={() => handleSave("published")}
-              disabled={isSaving}
-            >
-              {isSaving ? "Saving..." : "Publish Course"}
-            </button>
-
-            <button
-              type="button"
-              className="builder-secondary-button"
-              onClick={() => handleSave("draft")}
-              disabled={isSaving}
-            >
-              {isSaving ? "Saving..." : courseId ? "Update Draft" : "Save Draft"}
-            </button>
-
-            <button
-              type="submit"
-              className="builder-secondary-button"
-              disabled={isSaving}
-            >
-              Preview course <span aria-hidden="true">→</span>
-            </button>
-
-            {courseId && (
-              <button
-                type="button"
-                className="builder-secondary-button"
-                onClick={handleReset}
-                disabled={isSaving}
-              >
-                + Create Another Course
-              </button>
-            )}
-
-            {courseStatus === "published" && onNavigateToCatalog && (
-              <button
-                type="button"
-                className="builder-secondary-button"
-                onClick={onNavigateToCatalog}
-              >
-                View in Catalog ↗
-              </button>
-            )}
-          </div>
+        <div className="builder-actions" style={{ display: 'flex', gap: '1rem', justifyContent: 'flex-end', marginTop: '1.5rem', marginBottom: '2rem' }}>
+          <button type="button" onClick={handlePreview} className="builder-secondary-button">
+            Preview course
+          </button>
+          <button type="button" onClick={handleSaveAndPublish} className="builder-primary-button" disabled={saving}>
+            {saving ? 'Publishing...' : 'Save & Publish Course →'}
+          </button>
         </div>
       </form>
 
       {preview && (
-        <section className="builder-preview" aria-labelledby="preview-title">
+        <section className="builder-preview" aria-labelledby="preview-title" style={{ marginTop: '2rem' }}>
           <div className="builder-preview-topline">
             <div>
               <p className="builder-eyebrow">03 · STUDENT VIEW</p>
@@ -904,11 +886,6 @@ export default function InstructorCourseBuilder({ onNavigateToCatalog }) {
               </section>
             ))}
           </div>
-          <p className="builder-preview-note">
-            <strong>Draft notice:</strong> This preview is stored only in the
-            current page state. It is not saved to the server and will be lost
-            if you reload or leave this page.
-          </p>
         </section>
       )}
     </section>

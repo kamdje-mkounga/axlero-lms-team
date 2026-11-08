@@ -16,11 +16,11 @@ class ICourseRepository {
   }
 
   async update(id, updates) {
-    throw new Error('Method update() must be implemented');
+    throw new Error('Methods update() must be implemented');
   }
 
   async delete(id) {
-    throw new Error('Method delete() must be implemented');
+    throw new Error('Methods delete() must be implemented soon');
   }
 }
 
