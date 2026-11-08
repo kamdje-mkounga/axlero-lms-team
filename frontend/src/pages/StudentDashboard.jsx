@@ -84,9 +84,34 @@ const savedLessons = (() => {
   }
 })();
 
-const localProgress = Math.round(
-  (savedLessons.length / 4) * 100
-);
+const totalLessons = Array.isArray(course.lessons)
+  ? course.lessons.length
+  : Array.isArray(course.chapters)
+    ? course.chapters.reduce(
+        (total, chapter) =>
+          total + (chapter.lessons || []).length,
+        0
+      )
+    : 0;
+
+const validCompletedLessons = [
+  ...new Set(savedLessons),
+].filter((id) => {
+  const lessons = course.lessons ||
+    (course.chapters || []).flatMap(
+      (chapter) => chapter.lessons || []
+    );
+
+  return lessons.some(
+    (lesson) => String(lesson._id || lesson.id) === String(id)
+  );
+});
+
+const localProgress = totalLessons > 0
+  ? Math.round(
+      (validCompletedLessons.length / totalLessons) * 100
+    )
+  : 0;
 
 const progress = Math.max(
   Number(enrollment.progress) || 0,
@@ -151,3 +176,4 @@ const progress = Math.max(
     </section>
   );
 }
+ 

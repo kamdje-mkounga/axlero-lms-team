@@ -13,6 +13,7 @@ export default function CourseDetail({
 }) {
   const courseId = course?.id || course?._id;
   const [courseDetails, setCourseDetails] = useState(course || null);
+  const [enrollment, setEnrollment] = useState(null);
   const [enrolled, setEnrolled] = useState(false);
   const [loading, setLoading] = useState(false);
   const [enrolling, setEnrolling] = useState(false);
@@ -34,18 +35,23 @@ export default function CourseDetail({
           getMyEnrollments(),
         ]);
 
-        if (active) {
-          setCourseDetails(details);
+        if (!active) return;
 
-          setEnrolled(
-            enrollments.some((item) => {
-              const enrolledCourseId =
-                item.courseId || item.course?.id || item.course?._id;
+        setCourseDetails(details);
 
-              return enrolledCourseId === courseId;
-            })
+        const currentEnrollment = enrollments.find((item) => {
+          const enrolledCourseId =
+            item.courseId ||
+            item.course?._id ||
+            item.course;
+
+          return (
+            String(enrolledCourseId) === String(course._id)
           );
-        }
+        });
+
+        setEnrollment(currentEnrollment || null);
+        setEnrolled(Boolean(currentEnrollment));
       } catch (err) {
         if (active) {
           setError(
@@ -75,18 +81,47 @@ export default function CourseDetail({
     setMessage('');
 
     try {
-      const result = await enrollInCourse(targetId);
+      await enrollInCourse(courseDetails._id);
 
-      setEnrolled(true);
-      setMessage(
-        result.message || 'Enrollment successful!'
-      );
+      // Refresh enrollment details after successful enrollment
+      const enrollments = await getMyEnrollments();
+
+      const currentEnrollment = enrollments.find((item) => {
+        const enrolledCourseId =
+          item.courseId ||
+          item.course?._id ||
+          item.course;
+
+        return (
+          String(enrolledCourseId) ===
+          String(courseDetails._id)
+        );
+      });
+
+      setEnrollment(currentEnrollment || null);
+      setEnrolled(Boolean(currentEnrollment));
+
+      setMessage('Enrollment successful!');
     } catch (err) {
       setError(
         err.message || 'Unable to enroll in this course.'
       );
     } finally {
       setEnrolling(false);
+    }
+  }
+
+  function handleContinue() {
+    if (!enrollment) {
+      setError('Enrollment details not found. Please refresh.');
+      return;
+    }
+
+    if (typeof onContinue === 'function') {
+      onContinue({
+        course: courseDetails,
+        enrollment,
+      });
     }
   }
 
@@ -138,20 +173,14 @@ export default function CourseDetail({
 
       {error && <p role="alert">{error}</p>}
 
-      
-{enrolled ? (
-        
-<button
-  type="button"
-  onClick={() => {
-    console.log('Continue button clicked');
-    onContinue();
-  }}
-  disabled={loading}
->
-  Continue Learning
-</button>
-
+      {enrolled ? (
+        <button
+          type="button"
+          onClick={handleContinue}
+          disabled={loading || !enrollment}
+        >
+          Continue Learning
+        </button>
       ) : (
         <button
           type="button"
@@ -161,6 +190,7 @@ export default function CourseDetail({
           {enrolling ? 'Enrolling...' : 'Enroll Now'}
         </button>
       )}
+
       {message && <p role="status">{message}</p>}
     </section>
   );
