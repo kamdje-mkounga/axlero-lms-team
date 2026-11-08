@@ -20,7 +20,7 @@ router.use(authMiddleware);
 
 // Students can view their enrollments.
 router.get(
-  '/my',
+  '/me',
   authorizeRoles('student', 'admin'),
   getMyEnrollments
 );

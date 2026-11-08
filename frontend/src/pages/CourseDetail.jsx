@@ -11,6 +11,7 @@ export default function CourseDetail({
   onBack,
   onContinue,
 }) {
+  const courseId = course?.id || course?._id;
   const [courseDetails, setCourseDetails] = useState(course || null);
   const [enrollment, setEnrollment] = useState(null);
   const [enrolled, setEnrolled] = useState(false);
@@ -20,7 +21,7 @@ export default function CourseDetail({
   const [message, setMessage] = useState('');
 
   useEffect(() => {
-    if (!course?._id) return;
+    if (!courseId) return;
 
     let active = true;
 
@@ -30,7 +31,7 @@ export default function CourseDetail({
 
       try {
         const [details, enrollments] = await Promise.all([
-          getCourseById(course._id),
+          getCourseById(courseId),
           getMyEnrollments(),
         ]);
 
@@ -69,10 +70,11 @@ export default function CourseDetail({
     return () => {
       active = false;
     };
-  }, [course?._id]);
+  }, [courseId]);
 
   async function handleEnroll() {
-    if (!courseDetails?._id || enrolling) return;
+    const targetId = courseDetails?.id || courseDetails?._id || courseId;
+    if (!targetId || enrolling) return;
 
     setEnrolling(true);
     setError('');

@@ -15,7 +15,7 @@ export default function CourseCatalog({ onSelectCourse }) {
 
         const data = await getCourses();
 
-        setCourses(data.courses || []);
+        setCourses(data.courses || data.data || (Array.isArray(data) ? data : []));
       } catch (err) {
         setError(err.message || 'Unable to connect to the server.');
       } finally {
@@ -65,40 +65,43 @@ export default function CourseCatalog({ onSelectCourse }) {
       )}
 
       <div className="student-course-grid">
-        {courses.map((course) => (
-          <article className="student-course-card" key={course._id}>
-            <span className="course-category">
-              {course.category || 'General'}
-            </span>
+        {courses.map((course) => {
+          const courseId = course.id || course._id;
+          return (
+            <article className="student-course-card" key={courseId}>
+              <span className="course-category">
+                {course.category || 'General'}
+              </span>
 
-            <h3>{course.title}</h3>
+              <h3>{course.title}</h3>
 
-            <p>{course.description || 'No description available.'}</p>
+              <p>{course.description || 'No description available.'}</p>
 
-            {course.instructor?.name && (
-              <p>Instructor: {course.instructor.name}</p>
-            )}
+              {course.instructor?.name && (
+                <p>Instructor: {course.instructor.name}</p>
+              )}
 
-            <div className="course-actions">
-              <button
-                type="button"
-                onClick={() => onSelectCourse?.(course)}
-              >
-                View Course
-              </button>
+              <div className="course-actions">
+                <button
+                  type="button"
+                  onClick={() => onSelectCourse?.(course)}
+                >
+                  View Course
+                </button>
 
-              <button
-                type="button"
-                onClick={() => handleEnroll(course._id)}
-                disabled={enrollingCourse === course._id}
-              >
-                {enrollingCourse === course._id
-                  ? 'Enrolling...'
-                  : 'Enroll Now'}
-              </button>
-            </div>
-          </article>
-        ))}
+                <button
+                  type="button"
+                  onClick={() => handleEnroll(courseId)}
+                  disabled={enrollingCourse === courseId}
+                >
+                  {enrollingCourse === courseId
+                    ? 'Enrolling...'
+                    : 'Enroll Now'}
+                </button>
+              </div>
+            </article>
+          );
+        })}
       </div>
     </section>
   );
