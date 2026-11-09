@@ -15,7 +15,7 @@ export default function CourseCatalog({ onSelectCourse }) {
 
         const data = await getCourses();
 
-        // Handle various backend response shapes safely
+
         const courseList = Array.isArray(data)
           ? data
           : data.courses || data.data || [];

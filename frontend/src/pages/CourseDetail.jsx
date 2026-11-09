@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from 'react';
 import {
   getCourseById,
@@ -81,7 +80,8 @@ export default function CourseDetail({
     setMessage('');
 
     try {
-      await enrollInCourse(courseDetails._id);
+      // Use targetId instead of undefined courseDetails._id references
+      await enrollInCourse(targetId);
 
       // Refresh enrollment details after successful enrollment
       const enrollments = await getMyEnrollments();
@@ -94,7 +94,7 @@ export default function CourseDetail({
 
         return (
           String(enrolledCourseId) ===
-          String(courseDetails._id)
+          String(targetId)
         );
       });
 
@@ -103,6 +103,29 @@ export default function CourseDetail({
 
       setMessage('Enrollment successful!');
     } catch (err) {
+      // Handle 409 Conflict / already enrolled gracefully
+      if (err.status === 409 || err.message?.toLowerCase().includes('already enrolled')) {
+        try {
+          const enrollments = await getMyEnrollments();
+          const currentEnrollment = enrollments.find((item) => {
+            const enrolledCourseId =
+              item.courseId ||
+              item.course?._id ||
+              item.course;
+            return String(enrolledCourseId) === String(targetId);
+          });
+
+          if (currentEnrollment) {
+            setEnrollment(currentEnrollment);
+            setEnrolled(true);
+            setMessage('You are already enrolled in this course.');
+            return;
+          }
+        } catch (fetchErr) {
+          // Fallback if fetch fails
+        }
+      }
+
       setError(
         err.message || 'Unable to enroll in this course.'
       );
