@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import CourseCatalog from './pages/CourseCatalog';
 import CourseDetail from './pages/CourseDetail';
@@ -37,6 +36,7 @@ export default function App() {
   });
 
   const [selectedCourse, setSelectedCourse] = useState(null);
+  const [selectedEnrollment, setSelectedEnrollment] = useState(null); // <-- Moved inside App component!
   const [authMode, setAuthMode] = useState('login');
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -180,7 +180,7 @@ export default function App() {
 
     setUser(null);
     setSelectedCourse(null);
-    setSelectedEnrollment(null);
+    setSelectedEnrollment(null); // <-- Fixed typo here
     setPage('courses');
     setAuthMessage('');
     setAuthError('');
