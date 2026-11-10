@@ -38,6 +38,38 @@ function getCourseLessons(course) {
     : [];
 }
 
+// Fonction utilitaire pour récupérer le vrai nom de l'utilisateur connecté
+function getStudentName() {
+  try {
+    const userStr = sessionStorage.getItem('axleroUser') || localStorage.getItem('axleroUser');
+    if (userStr) {
+      const user = JSON.parse(userStr);
+      if (user.name || user.fullName || user.username) {
+        return user.name || user.fullName || user.username;
+      }
+    }
+
+    const token = sessionStorage.getItem('axleroToken') || localStorage.getItem('axleroToken');
+    if (token) {
+      const base64Url = token.split('.')[1];
+      const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+      const jsonPayload = decodeURIComponent(atob(base64).split('').map(function (c) {
+        return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+      }).join(''));
+      const decoded = JSON.parse(jsonPayload);
+      if (decoded.name || decoded.fullName || decoded.username) {
+        return decoded.name || decoded.fullName || decoded.username;
+      }
+      if (decoded.email) {
+        return decoded.email.split('@')[0];
+      }
+    }
+  } catch (e) {
+    // En cas d'erreur de lecture
+  }
+  return 'Valued Student';
+}
+
 // Fonction utilitaire pour transformer un lien YouTube classique en lien embed si besoin
 function getEmbedUrl(url) {
   if (!url) return null;
@@ -57,6 +89,7 @@ export default function LearningPage({ course, enrollment, onBack }) {
   const enrollmentId = enrollment?._id || enrollment?.id;
 
   const [currentLesson, setCurrentLesson] = useState(0);
+  const [studentName, setStudentName] = useState('Valued Student');
 
   const [completedLessons, setCompletedLessons] = useState(() =>
     getSavedProgress(courseId)
@@ -69,6 +102,7 @@ export default function LearningPage({ course, enrollment, onBack }) {
   const certificateRef = useRef(null);
 
   useEffect(() => {
+    setStudentName(getStudentName());
     if (courseId) {
       localStorage.setItem(
         getProgressKey(courseId),
@@ -106,14 +140,12 @@ export default function LearningPage({ course, enrollment, onBack }) {
     setMessage('');
 
     try {
-      // Mock mode: save progress locally
       if (USE_MOCK) {
         setCompletedLessons(updatedLessons);
         setMessage('Lesson progress saved successfully!');
         return;
       }
 
-      // Backend mode: save progress through API
       if (!enrollmentId) {
         throw new Error('Enrollment ID not found. Please refresh.');
       }
@@ -149,64 +181,53 @@ export default function LearningPage({ course, enrollment, onBack }) {
     }
   }
 
-  // Fonction de téléchargement direct du certificat en image/PDF sans passer par l'imprimante
   function downloadCertificateImage() {
     const canvas = document.createElement('canvas');
     canvas.width = 1200;
     canvas.height = 850;
     const ctx = canvas.getContext('2d');
 
-    // Fond blanc du certificat
     ctx.fillStyle = '#ffffff';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-    // Bordure élégante
     ctx.strokeStyle = '#4f46e5';
     ctx.lineWidth = 15;
     ctx.strokeRect(30, 30, canvas.width - 60, canvas.height - 60);
 
-    // Titre principal
     ctx.fillStyle = '#1e1b4b';
     ctx.font = 'bold 42px Arial';
     ctx.textAlign = 'center';
     ctx.fillText('CERTIFICATE OF COMPLETION', canvas.width / 2, 160);
 
-    // Sous-titre
     ctx.fillStyle = '#6b7280';
     ctx.font = '24px Arial';
     ctx.fillText('This is proudly presented to', canvas.width / 2, 240);
 
-    // Nom de l'étudiant
     ctx.fillStyle = '#4f46e5';
     ctx.font = 'bold 38px Arial';
-    ctx.fillText('Student / Learner', canvas.width / 2, 320);
+    ctx.fillText(studentName, canvas.width / 2, 320);
 
-    // Ligne de séparation
     ctx.strokeStyle = '#e5e7eb';
     ctx.lineWidth = 2;
     ctx.beginPath();
-    ctx.moveTo(350, 350);
-    ctx.lineTo(850, 350);
+    ctx.moveTo(300, 350);
+    ctx.lineTo(900, 350);
     ctx.stroke();
 
-    // Description
     ctx.fillStyle = '#374151';
     ctx.font = '24px Arial';
     ctx.fillText('for successfully completing the course', canvas.width / 2, 440);
 
-    // Nom du cours
     ctx.fillStyle = '#111827';
     ctx.font = 'bold 36px Arial';
     ctx.fillText(course.title || 'Course', canvas.width / 2, 520);
 
-    // Pied de page / Validation
     ctx.fillStyle = '#9ca3af';
     ctx.font = '18px Arial';
     ctx.fillText('Axlero LMS - Verified Official Certificate', canvas.width / 2, 700);
 
-    // Déclenchement du téléchargement automatique
     const link = document.createElement('a');
-    link.download = `Certificate-${course.title || 'Course'}.png`;
+    link.download = `Certificate-${studentName}-${course.title || 'Course'}.png`;
     link.href = canvas.toDataURL('image/png');
     link.click();
   }
@@ -329,18 +350,17 @@ export default function LearningPage({ course, enrollment, onBack }) {
         </div>
       )}
 
-      {/* Modal du Certificat */}
       {showCertificate && (
         <div className="certificate-modal" style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', background: 'rgba(0,0,0,0.6)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000 }}>
           <div ref={certificateRef} style={{ background: '#fff', padding: '40px', borderRadius: '10px', textAlign: 'center', maxWidth: '600px', width: '90%', border: '8px solid #4f46e5', position: 'relative' }}>
             <h2>CERTIFICATE OF COMPLETION</h2>
             <p style={{ margin: '15px 0' }}>This is proudly presented to</p>
             <h3 style={{ fontSize: '1.8em', color: '#4f46e5', borderBottom: '2px solid #e5e7eb', display: 'inline-block', paddingBottom: '5px' }}>
-              Student / Learner
+              {studentName}
             </h3>
             <p style={{ margin: '20px 0' }}>for successfully completing the course</p>
             <h4 style={{ fontSize: '1.4em' }}>{course.title}</h4>
-            <p style={{ fontSize: '0.9em', color: '#6b7280', marginTop: '30px' }}>Axlero LMS - Verified Certificate</p>
+            <p style={{ fontSize: '0.9em', color: '#6b7280', marginTop: '30px' }}>Axlero LMS - Verified Official Certificate</p>
 
             <div style={{ marginTop: '20px', display: 'flex', justifyContent: 'center', gap: '10px' }}>
               <button
