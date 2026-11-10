@@ -1,3 +1,4 @@
+
 import { useMemo, useState } from "react";
 import { createCourse, updateCourse as updateCourseApi } from "../api/courseApi";
 
@@ -27,12 +28,10 @@ function mapCourseToApi(course, status = "draft") {
     category: course.category,
     level: course.level.toLowerCase(),
     status,
-
     chapters: course.chapters.map((chapter, chapterIndex) => ({
       title: chapter.title.trim(),
       description: (chapter.description || "").trim(),
       order: chapterIndex + 1,
-
       lessons: chapter.lessons.map((lesson, lessonIndex) => ({
         title: lesson.title.trim(),
         content: lesson.description.trim(),
@@ -77,6 +76,7 @@ export default function InstructorCourseBuilder({ onNavigateToCatalog }) {
     () => countLessons(course.chapters),
     [course.chapters],
   );
+
   const completedFields = useMemo(() => {
     const required = [
       Boolean(course.title.trim()),
@@ -90,12 +90,14 @@ export default function InstructorCourseBuilder({ onNavigateToCatalog }) {
     ];
     return required.filter(Boolean).length;
   }, [course]);
+
   const totalFields =
     3 +
     course.chapters.reduce(
       (total, chapter) => total + 2 + chapter.lessons.length,
       0,
     );
+
   const completion = Math.round(
     (completedFields / Math.max(totalFields, 1)) * 100,
   );
@@ -143,7 +145,9 @@ export default function InstructorCourseBuilder({ onNavigateToCatalog }) {
           : chapter,
       ),
     }));
+
     clearError(`lesson-${lessonId}`);
+
     if (field === "videoUrl" && !isValidHttpUrl(value)) {
       setErrors((current) => ({
         ...current,
@@ -152,6 +156,7 @@ export default function InstructorCourseBuilder({ onNavigateToCatalog }) {
     } else {
       clearError(`video-${lessonId}`);
     }
+
     setPreview(null);
     setMessage("");
   }
@@ -169,17 +174,18 @@ export default function InstructorCourseBuilder({ onNavigateToCatalog }) {
   function removeChapter(chapterId) {
     const chapter = course.chapters.find((item) => item.id === chapterId);
     if (!chapter) return;
+
     if (
       !window.confirm(
         `Remove "${chapter.title.trim() || "this chapter"}" and all its lessons?`,
       )
-    )
-      return;
+    ) return;
 
     setCourse((current) => ({
       ...current,
       chapters: current.chapters.filter((item) => item.id !== chapterId),
     }));
+
     setErrors((current) => {
       const next = { ...current };
       delete next[`chapter-${chapterId}`];
@@ -190,6 +196,7 @@ export default function InstructorCourseBuilder({ onNavigateToCatalog }) {
       });
       return next;
     });
+
     setPreview(null);
     setMessage("");
   }
@@ -210,6 +217,7 @@ export default function InstructorCourseBuilder({ onNavigateToCatalog }) {
 
   function removeLesson(chapterId, lessonId) {
     const chapter = course.chapters.find((item) => item.id === chapterId);
+
     if (!chapter || chapter.lessons.length <= 1) {
       setMessage(
         "Each chapter must contain at least one lesson. Add another lesson before removing this one.",
@@ -219,6 +227,7 @@ export default function InstructorCourseBuilder({ onNavigateToCatalog }) {
     }
 
     const lesson = chapter.lessons.find((item) => item.id === lessonId);
+
     if (!window.confirm(`Remove "${lesson?.title.trim() || "this lesson"}"?`))
       return;
 
@@ -233,12 +242,14 @@ export default function InstructorCourseBuilder({ onNavigateToCatalog }) {
           : item,
       ),
     }));
+
     setErrors((current) => {
       const next = { ...current };
       delete next[`lesson-${lessonId}`];
       delete next[`video-${lessonId}`];
       return next;
     });
+
     setPreview(null);
     setMessage("");
   }
@@ -302,12 +313,9 @@ export default function InstructorCourseBuilder({ onNavigateToCatalog }) {
 
   function handleSubmit(event) {
     event.preventDefault();
-
     setPreview(null);
 
-    if (!validateCourse()) {
-      return;
-    }
+    if (!validateCourse()) return;
 
     setPreview({
       ...course,
@@ -341,10 +349,7 @@ export default function InstructorCourseBuilder({ onNavigateToCatalog }) {
 
   async function handleSave(targetStatus = "draft") {
     if (isSaving) return;
-
-    if (!validateCourse()) {
-      return;
-    }
+    if (!validateCourse()) return;
 
     setIsSaving(true);
     setMessage("");
@@ -359,19 +364,19 @@ export default function InstructorCourseBuilder({ onNavigateToCatalog }) {
         setMessage(
           targetStatus === "published"
             ? "Course published successfully! It is now live in the catalog."
-            : "Course draft updated successfully!"
+            : "Course draft updated successfully!",
         );
       } else {
         result = await createCourse(courseData);
         const savedId = result?.id || result?._id;
-        if (savedId) {
-          setCourseId(savedId);
-        }
+
+        if (savedId) setCourseId(savedId);
+
         setCourseStatus(targetStatus);
         setMessage(
           targetStatus === "published"
             ? "Course created and published successfully! It is now live in the catalog."
-            : "Course draft saved successfully!"
+            : "Course draft saved successfully!",
         );
       }
 
@@ -397,6 +402,7 @@ export default function InstructorCourseBuilder({ onNavigateToCatalog }) {
             and lessons.
           </p>
         </div>
+
         <span className="builder-draft-badge">
           {courseStatus === "published"
             ? "Published"
@@ -417,6 +423,7 @@ export default function InstructorCourseBuilder({ onNavigateToCatalog }) {
           </div>
           <p>Complete the required fields to generate a preview.</p>
         </div>
+
         <div
           className="builder-progress-track"
           role="progressbar"
@@ -426,16 +433,11 @@ export default function InstructorCourseBuilder({ onNavigateToCatalog }) {
         >
           <span style={{ width: `${completion}%` }} />
         </div>
+
         <div className="builder-stat-row">
-          <span>
-            <strong>{course.chapters.length}</strong> chapters
-          </span>
-          <span>
-            <strong>{lessonCount}</strong> lessons
-          </span>
-          <span>
-            <strong>{course.level}</strong> level
-          </span>
+          <span><strong>{course.chapters.length}</strong> chapters</span>
+          <span><strong>{lessonCount}</strong> lessons</span>
+          <span><strong>{course.level}</strong> level</span>
         </div>
       </div>
 
@@ -525,6 +527,7 @@ export default function InstructorCourseBuilder({ onNavigateToCatalog }) {
                 <option>Other</option>
               </select>
             </div>
+
             <div className="builder-field">
               <label htmlFor="course-level">Difficulty level</label>
               <select
@@ -550,6 +553,7 @@ export default function InstructorCourseBuilder({ onNavigateToCatalog }) {
                 chapter.
               </p>
             </div>
+
             <button
               className="builder-secondary-button"
               type="button"
@@ -560,9 +564,7 @@ export default function InstructorCourseBuilder({ onNavigateToCatalog }) {
           </div>
 
           {errors.chapters && (
-            <p className="builder-error" role="alert">
-              {errors.chapters}
-            </p>
+            <p className="builder-error" role="alert">{errors.chapters}</p>
           )}
 
           {course.chapters.length === 0 && (
@@ -585,6 +587,7 @@ export default function InstructorCourseBuilder({ onNavigateToCatalog }) {
                 <span className="builder-number">
                   {String(chapterIndex + 1).padStart(2, "0")}
                 </span>
+
                 <div className="builder-chapter-title">
                   <label htmlFor={`chapter-${chapter.id}`}>
                     Chapter {chapterIndex + 1} title{" "}
@@ -614,15 +617,12 @@ export default function InstructorCourseBuilder({ onNavigateToCatalog }) {
                     rows={2}
                     value={chapter.description || ""}
                     onChange={(event) =>
-                      updateChapter(
-                        chapter.id,
-                        "description",
-                        event.target.value,
-                      )
+                      updateChapter(chapter.id, "description", event.target.value)
                     }
                     placeholder="Briefly describe what this chapter covers."
                   />
                 </div>
+
                 <button
                   className="builder-remove-button"
                   type="button"
@@ -650,6 +650,7 @@ export default function InstructorCourseBuilder({ onNavigateToCatalog }) {
                     <span className="builder-lesson-icon" aria-hidden="true">
                       ▶
                     </span>
+
                     <div className="builder-lesson-fields">
                       <label htmlFor={`lesson-${lesson.id}`}>
                         Lesson {lessonIndex + 1} title{" "}
@@ -659,12 +660,7 @@ export default function InstructorCourseBuilder({ onNavigateToCatalog }) {
                         id={`lesson-${lesson.id}`}
                         value={lesson.title}
                         onChange={(event) =>
-                          updateLesson(
-                            chapter.id,
-                            lesson.id,
-                            "title",
-                            event.target.value,
-                          )
+                          updateLesson(chapter.id, lesson.id, "title", event.target.value)
                         }
                         placeholder="e.g. What is a component?"
                         aria-invalid={Boolean(errors[`lesson-${lesson.id}`])}
@@ -684,12 +680,7 @@ export default function InstructorCourseBuilder({ onNavigateToCatalog }) {
                         rows={2}
                         value={lesson.description}
                         onChange={(event) =>
-                          updateLesson(
-                            chapter.id,
-                            lesson.id,
-                            "description",
-                            event.target.value,
-                          )
+                          updateLesson(chapter.id, lesson.id, "description", event.target.value)
                         }
                         placeholder="What will this lesson cover?"
                       />
@@ -703,12 +694,7 @@ export default function InstructorCourseBuilder({ onNavigateToCatalog }) {
                         type="url"
                         value={lesson.videoUrl}
                         onChange={(event) =>
-                          updateLesson(
-                            chapter.id,
-                            lesson.id,
-                            "videoUrl",
-                            event.target.value,
-                          )
+                          updateLesson(chapter.id, lesson.id, "videoUrl", event.target.value)
                         }
                         placeholder="https://example.com/lesson"
                         aria-invalid={Boolean(errors[`video-${lesson.id}`])}
@@ -729,16 +715,12 @@ export default function InstructorCourseBuilder({ onNavigateToCatalog }) {
                         min="0"
                         value={lesson.durationMinutes || ""}
                         onChange={(event) =>
-                          updateLesson(
-                            chapter.id,
-                            lesson.id,
-                            "durationMinutes",
-                            event.target.value,
-                          )
+                          updateLesson(chapter.id, lesson.id, "durationMinutes", event.target.value)
                         }
                         placeholder="e.g. 15"
                       />
                     </div>
+
                     <button
                       className="builder-remove-button"
                       type="button"
@@ -749,6 +731,7 @@ export default function InstructorCourseBuilder({ onNavigateToCatalog }) {
                     </button>
                   </div>
                 ))}
+
                 <button
                   className="builder-add-lesson"
                   type="button"
@@ -871,6 +854,7 @@ export default function InstructorCourseBuilder({ onNavigateToCatalog }) {
                     </p>
                   </div>
                 </div>
+
                 <ul>
                   {chapter.lessons.map((lesson, lessonIndex) => (
                     <li key={lesson.id}>
@@ -886,11 +870,7 @@ export default function InstructorCourseBuilder({ onNavigateToCatalog }) {
                           </span>
                         )}
                         {lesson.videoUrl && (
-                          <a
-                            href={lesson.videoUrl}
-                            target="_blank"
-                            rel="noreferrer noopener"
-                          >
+                          <a href={lesson.videoUrl} target="_blank" rel="noreferrer noopener">
                             Open lesson resource ↗
                           </a>
                         )}
@@ -904,6 +884,7 @@ export default function InstructorCourseBuilder({ onNavigateToCatalog }) {
               </section>
             ))}
           </div>
+
           <p className="builder-preview-note">
             <strong>Draft notice:</strong> This preview is stored only in the
             current page state. It is not saved to the server and will be lost
