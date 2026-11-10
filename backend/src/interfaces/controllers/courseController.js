@@ -1,6 +1,8 @@
 ﻿const CourseRepository = require('../../infrastructure/database/mongoose/repositories/CourseRepository');
+const EnrollmentRepository = require('../../infrastructure/database/mongoose/repositories/EnrollmentRepository');
 
 const courseRepository = new CourseRepository();
+const enrollmentRepository = new EnrollmentRepository();
 
 function sendError(res, statusCode, message) {
   return res.status(statusCode).json({ success: false, message });
@@ -37,7 +39,24 @@ async function getCourse(req, res, next) {
       return sendError(res, 404, 'Course not found');
     }
 
-    return res.status(200).json({ success: true, data: course });
+    // Vérifie si l'utilisateur connecté est inscrit à ce cours
+    let isEnrolled = false;
+    if (req.user) {
+      const courseId = course._id || course.id;
+      const enrollment = await enrollmentRepository.findByStudentAndCourse(req.user.id, courseId);
+      isEnrolled = !!enrollment;
+    }
+
+    // Convertit en objet si c'est un document Mongoose et ajoute isEnrolled
+    const courseData = typeof course.toObject === 'function' ? course.toObject() : { ...course };
+
+    return res.status(200).json({
+      success: true,
+      data: {
+        ...courseData,
+        isEnrolled,
+      }
+    });
   } catch (error) {
     next(error);
   }
