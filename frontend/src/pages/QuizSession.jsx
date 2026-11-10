@@ -6,6 +6,7 @@ export default function QuizSession({ course, onComplete, onBack }) {
     const [submitted, setSubmitted] = useState(false);
     const [score, setScore] = useState(0);
 
+
     // Utilise les quiz personnalisés du cours, ou génère des questions dynamiques par défaut si vide
     const courseTitle = course?.title || 'this course';
     const questions = course?.quizzes && course.quizzes.length > 0
@@ -35,6 +36,31 @@ export default function QuizSession({ course, onComplete, onBack }) {
             }
         ];
 
+    // Récupération des quiz du cours ou utilisation de questions par défaut si non définies
+    const questions = course?.quizzes || [
+        {
+            question: `What is the main core concept covered in ${course?.title || 'this course'}?`,
+            options: [
+                "Writing scalable architecture and components",
+                "Managing hardware drivers",
+                "Configuring local network switches",
+                "None of the above"
+            ],
+            correct: 0
+        },
+        {
+            question: "Which of the following best describes the application workflow?",
+            options: [
+                "Monolithic legacy processing",
+                "Full-stack reactive state management",
+                "Static HTML file hosting",
+                "Manual data parsing"
+            ],
+            correct: 1
+        }
+    ];
+
+
     const handleOptionSelect = (optionIndex) => {
         setSelectedAnswers({
             ...selectedAnswers,
@@ -58,7 +84,11 @@ export default function QuizSession({ course, onComplete, onBack }) {
     };
 
     const percentage = Math.round((score / questions.length) * 100);
+
     const isPassed = percentage >= 50; // Réussite à 50% ou plus
+
+    const isPassed = percentage >= 50; // Seuil de réussite à 50%
+
 
     return (
         <section className="student-page" style={{ maxWidth: '700px', margin: '0 auto', padding: '20px' }}>
@@ -70,7 +100,11 @@ export default function QuizSession({ course, onComplete, onBack }) {
 
             <div style={{ background: '#fff', padding: '30px', borderRadius: '10px', boxShadow: '0 4px 6px rgba(0,0,0,0.05)', border: '1px solid #e5e7eb' }}>
                 <h2>📝 Knowledge Check Quiz</h2>
+
                 <p style={{ color: '#6b7280', marginBottom: '20px' }}>Course: <strong>{courseTitle}</strong></p>
+
+                <p style={{ color: '#6b7280', marginBottom: '20px' }}>Course: <strong>{course?.title}</strong></p>
+
 
                 {!submitted ? (
                     <div>

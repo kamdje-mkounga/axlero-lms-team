@@ -39,6 +39,7 @@ function getCourseLessons(course) {
     : [];
 }
 
+
 function getStudentName() {
   try {
     const userStr = sessionStorage.getItem('axleroUser') || localStorage.getItem('axleroUser');
@@ -64,9 +65,18 @@ function getStudentName() {
         return decoded.email.split('@')[0];
       }
     }
+
   } catch (e) { }
   return 'Valued Student';
 }
+
+  } catch (e) {
+    // En cas d'erreur de lecture
+  }
+  return 'Valued Student';
+}
+
+// Fonction utilitaire pour transformer un lien YouTube classique en lien embed si besoin
 
 function getEmbedUrl(url) {
   if (!url) return null;
@@ -368,6 +378,7 @@ export default function LearningPage({ course, enrollment, onBack }) {
         </div>
       )}
 
+
       {/* Fenêtre modale du Quiz */}
       {showQuizModal && (
         <div style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', background: 'rgba(0,0,0,0.6)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000 }}>
@@ -388,6 +399,7 @@ export default function LearningPage({ course, enrollment, onBack }) {
       )}
 
       {/* Modal du Certificat */}
+
       {showCertificate && (
         <div className="certificate-modal" style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', background: 'rgba(0,0,0,0.6)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000 }}>
           <div ref={certificateRef} style={{ background: '#fff', padding: '40px', borderRadius: '10px', textAlign: 'center', maxWidth: '600px', width: '90%', border: '8px solid #4f46e5', position: 'relative' }}>
