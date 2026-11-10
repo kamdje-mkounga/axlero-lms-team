@@ -70,11 +70,25 @@ export default function StudentDashboard({ onSelectCourse }) {
       {!loading && !error && enrollments.length > 0 && (
         <div className="student-course-grid">
           {enrollments.map((enrollment, index) => {
-            const course = enrollment.course;
+            // Gère de manière sécurisée si enrollment.course est un objet ou juste un ID (string)
+            let courseObj = {};
+            if (typeof enrollment.course === 'object' && enrollment.course !== null) {
+              courseObj = enrollment.course;
+            } else {
+              courseObj = {
+                _id: enrollment.course || enrollment.courseId,
+                title: enrollment.courseTitle || enrollment.title || `Course #${index + 1}`,
+                description: enrollment.description || enrollment.courseDescription || 'No description available.',
+                category: enrollment.category || 'General'
+              };
+            }
 
-            if (!course) return null;
-            const courseId =
-              course._id || course.id || enrollment.courseId || course.title;
+            const courseId = courseObj._id || courseObj.id || enrollment.courseId || index;
+
+            // Récupération sécurisée des champs avec tous les noms possibles
+            const courseTitle = courseObj.title || courseObj.name || courseObj.courseTitle || 'Untitled Course';
+            const courseDesc = courseObj.description || courseObj.desc || 'No description available.';
+            const courseCategory = courseObj.category || courseObj.cat || 'General';
 
             const savedLessons = (() => {
               try {
@@ -103,23 +117,13 @@ export default function StudentDashboard({ onSelectCourse }) {
             return (
               <article
                 className="student-course-card"
-                key={
-                  enrollment._id ||
-                  enrollment.courseId ||
-                  course._id ||
-                  index
-                }
+                key={enrollment._id || courseId}
               >
-                <h3>{course.title || 'Untitled Course'}</h3>
+                <h3>{courseTitle}</h3>
 
-                <p>
-                  {course.description ||
-                    'No description available.'}
-                </p>
+                <p>{courseDesc}</p>
 
-                <p>
-                  Category: {course.category || 'General'}
-                </p>
+                <p>Category: {courseCategory}</p>
 
                 <h4>Course Progress: {safeProgress}%</h4>
 
@@ -141,7 +145,7 @@ export default function StudentDashboard({ onSelectCourse }) {
 
                 <button
                   type="button"
-                  onClick={() => onSelectCourse?.(course)}
+                  onClick={() => onSelectCourse?.(courseObj)}
                 >
                   Continue Learning
                 </button>

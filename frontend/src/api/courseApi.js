@@ -1,6 +1,5 @@
 import { mockCourses, mockEnrollments } from './mockData';
 
-
 const API_URL = `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api`;
 const USE_MOCK = import.meta.env.VITE_USE_MOCK === 'true';
 
@@ -29,10 +28,23 @@ async function request(url, options = {}) {
     headers,
   });
 
-  const data = await response.json();
+  // Tente de parser le JSON, gère le cas où la réponse est vide
+  let data = {};
+  try {
+    data = await response.json();
+  } catch (err) {
+    // Si la réponse n'est pas du JSON
+  }
 
   if (!response.ok) {
-    throw new Error(data.message || 'Something went wrong');
+    // Message d'aide plus explicite en cas d'erreur 403
+    if (response.status === 403) {
+      throw new Error(
+        data.message ||
+        'Accès refusé (403) : Votre compte n\'a pas le rôle "instructor" ou "admin" requis pour cette action. Vérifiez votre token ou activez VITE_USE_MOCK=true dans votre .env'
+      );
+    }
+    throw new Error(data.message || 'Une erreur est survenue');
   }
 
   return data;
@@ -40,23 +52,34 @@ async function request(url, options = {}) {
 
 async function mockRequest(url, options = {}) {
   const method = options.method || 'GET';
-  const body = options.body ? JSON.parse(options.body) : {};
+  let body = {};
+  try {
+    body = options.body ? JSON.parse(options.body) : {};
+  } catch (e) {
+    body = {};
+  }
 
   // GET /api/courses
   if (url === '/courses' && method === 'GET') {
     return { courses: mockCourses };
   }
 
-  // POST /api/courses (Create Course)
+  // POST /api/courses ou /courses (Create Course)
   if (url === '/courses' && method === 'POST') {
     const newCourse = {
       _id: `course-${Date.now()}`,
+      id: `course-${Date.now()}`,
       ...body,
       status: body.status || 'published',
       createdAt: new Date().toISOString(),
     };
     mockCourses.push(newCourse);
-    return { message: 'Course created successfully', course: newCourse };
+    return {
+      success: true,
+      message: 'Course created successfully',
+      course: newCourse,
+      data: newCourse
+    };
   }
 
   // GET /api/courses/:id
@@ -64,33 +87,17 @@ async function mockRequest(url, options = {}) {
 
   if (courseMatch && method === 'GET') {
     const course = mockCourses.find(
-      (item) => item._id === courseMatch[1]
+      (item) => (item._id || item.id) === courseMatch[1]
     );
 
     if (!course) {
       throw new Error('Course not found');
     }
 
-    return { course };
+    return { course, data: course };
   }
 
-  // POST /courses
-  if (url === '/courses' && method === 'POST') {
-    const newCourse = {
-      _id: `course-${Date.now()}`,
-      id: `course-${Date.now()}`,
-      ...JSON.parse(options.body || '{}'),
-      createdAt: new Date().toISOString(),
-    };
-    mockCourses.push(newCourse);
-    return {
-      success: true,
-      message: 'Course created successfully',
-      data: newCourse,
-    };
-  }
-
-  // PUT /courses/:id
+  // PUT /api/courses/:id
   const updateMatch = url.match(/^\/courses\/([^/]+)$/);
   if (updateMatch && method === 'PUT') {
     const courseIndex = mockCourses.findIndex(
@@ -99,10 +106,9 @@ async function mockRequest(url, options = {}) {
     if (courseIndex === -1) {
       throw new Error('Course not found');
     }
-    const updates = JSON.parse(options.body || '{}');
     mockCourses[courseIndex] = {
       ...mockCourses[courseIndex],
-      ...updates,
+      ...body,
       updatedAt: new Date().toISOString(),
     };
     return {
@@ -112,7 +118,7 @@ async function mockRequest(url, options = {}) {
     };
   }
 
-  // DELETE /courses/:id
+  // DELETE /api/courses/:id
   if (updateMatch && method === 'DELETE') {
     const courseIndex = mockCourses.findIndex(
       (item) => (item.id || item._id) === updateMatch[1]
@@ -127,10 +133,9 @@ async function mockRequest(url, options = {}) {
     };
   }
 
-  // POST /api/enrollments or legacy POST /api/courses/:id/enroll
+  // POST /api/enrollments ou legacy POST /api/courses/:id/enroll
   const enrollMatch = url.match(/^\/courses\/([^/]+)\/enroll$/);
   if ((url === '/enrollments' || enrollMatch) && method === 'POST') {
-    const body = options.body ? JSON.parse(options.body) : {};
     const courseId = body.courseId || (enrollMatch ? enrollMatch[1] : null);
 
     const course = mockCourses.find(
@@ -169,6 +174,9 @@ async function mockRequest(url, options = {}) {
   if (url === '/enrollments/me' && method === 'GET') {
     return {
       enrollments: mockEnrollments.filter(
+        (item) => item.userId === 'mock-student'
+      ),
+      data: mockEnrollments.filter(
         (item) => item.userId === 'mock-student'
       ),
     };
@@ -212,7 +220,7 @@ export async function createCourse(courseData) {
     body: JSON.stringify(courseData),
   });
 
-  return data.data || data;
+  return data.data || data.course || data;
 }
 
 export async function updateCourse(id, courseData) {
@@ -221,7 +229,7 @@ export async function updateCourse(id, courseData) {
     body: JSON.stringify(courseData),
   });
 
-  return data.data || data;
+  return data.data || data.course || data;
 }
 
 export async function deleteCourse(id) {

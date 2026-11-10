@@ -1,4 +1,3 @@
-
 const EnrollmentRepository = require('../../infrastructure/database/mongoose/repositories/EnrollmentRepository');
 const CourseRepository = require('../../infrastructure/database/mongoose/repositories/CourseRepository');
 
@@ -19,10 +18,29 @@ async function getMyEnrollments(req, res, next) {
       req.user.id
     );
 
+    // S'assure que chaque cours lié à l'inscription est bien chargé/peuplé avec ses détails
+    const enrichedEnrollments = await Promise.all(
+      enrollments.map(async (en) => {
+        const enObj = typeof en.toObject === 'function' ? en.toObject() : { ...en };
+
+        // Si le cours est juste un ID ou ne possède pas de titre, on le récupère
+        if (!enObj.course || typeof enObj.course !== 'object' || (!enObj.course.title && !enObj.course.name)) {
+          const courseId = enObj.course || enObj.courseId;
+          if (courseId) {
+            const course = await courseRepository.findById(courseId);
+            if (course) {
+              enObj.course = typeof course.toObject === 'function' ? course.toObject() : course;
+            }
+          }
+        }
+        return enObj;
+      })
+    );
+
     return res.status(200).json({
       success: true,
-      count: enrollments.length,
-      data: enrollments,
+      count: enrichedEnrollments.length,
+      data: enrichedEnrollments,
     });
   } catch (error) {
     next(error);
