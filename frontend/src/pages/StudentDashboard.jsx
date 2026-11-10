@@ -90,6 +90,16 @@ export default function StudentDashboard({ onSelectCourse }) {
             const courseDesc = courseObj.description || courseObj.desc || 'No description available.';
             const courseCategory = courseObj.category || courseObj.cat || 'General';
 
+            // Récupération dynamique du nombre total de leçons du cours
+            const courseLessons = (() => {
+              if (Array.isArray(courseObj?.chapters)) {
+                return courseObj.chapters.flatMap(ch => ch.lessons || []);
+              }
+              return Array.isArray(courseObj?.lessons) ? courseObj.lessons : [];
+            })();
+
+            const totalLessonsCount = courseLessons.length > 0 ? courseLessons.length : 4;
+
             const savedLessons = (() => {
               try {
                 return JSON.parse(
@@ -100,8 +110,9 @@ export default function StudentDashboard({ onSelectCourse }) {
               }
             })();
 
+            // Calcul dynamique du pourcentage basé sur le vrai nombre de leçons
             const localProgress = Math.round(
-              (savedLessons.length / 4) * 100
+              (savedLessons.length / totalLessonsCount) * 100
             );
 
             const progress = Math.max(
