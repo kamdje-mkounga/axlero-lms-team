@@ -6,29 +6,34 @@ export default function QuizSession({ course, onComplete, onBack }) {
     const [submitted, setSubmitted] = useState(false);
     const [score, setScore] = useState(0);
 
-    // Récupération des quiz du cours ou utilisation de questions par défaut si non définies
-    const questions = course?.quizzes || [
-        {
-            question: `What is the main core concept covered in ${course?.title || 'this course'}?`,
-            options: [
-                "Writing scalable architecture and components",
-                "Managing hardware drivers",
-                "Configuring local network switches",
-                "None of the above"
-            ],
-            correct: 0
-        },
-        {
-            question: "Which of the following best describes the application workflow?",
-            options: [
-                "Monolithic legacy processing",
-                "Full-stack reactive state management",
-                "Static HTML file hosting",
-                "Manual data parsing"
-            ],
-            correct: 1
-        }
-    ];
+    // Utilise les quiz personnalisés du cours, ou génère des questions dynamiques par défaut si vide
+    const courseTitle = course?.title || 'this course';
+    const questions = course?.quizzes && course.quizzes.length > 0
+        ? course.quizzes
+        : [
+            {
+                id: 'default-1',
+                question: `What is the primary objective and core focus of ${courseTitle}?`,
+                options: [
+                    `Mastering the foundational and advanced concepts of ${courseTitle}`,
+                    "Configuring local operating system drivers",
+                    "Managing physical network hardware routers",
+                    "None of the above"
+                ],
+                correct: 0
+            },
+            {
+                id: 'default-2',
+                question: `Which architectural approach is best applied when developing projects in ${courseTitle}?`,
+                options: [
+                    "Static manual text file editing",
+                    "Modular component and reactive state architecture",
+                    "Monolithic legacy processing",
+                    "Unstructured shell scripting"
+                ],
+                correct: 1
+            }
+        ];
 
     const handleOptionSelect = (optionIndex) => {
         setSelectedAnswers({
@@ -53,7 +58,7 @@ export default function QuizSession({ course, onComplete, onBack }) {
     };
 
     const percentage = Math.round((score / questions.length) * 100);
-    const isPassed = percentage >= 50; // Seuil de réussite à 50%
+    const isPassed = percentage >= 50; // Réussite à 50% ou plus
 
     return (
         <section className="student-page" style={{ maxWidth: '700px', margin: '0 auto', padding: '20px' }}>
@@ -65,7 +70,7 @@ export default function QuizSession({ course, onComplete, onBack }) {
 
             <div style={{ background: '#fff', padding: '30px', borderRadius: '10px', boxShadow: '0 4px 6px rgba(0,0,0,0.05)', border: '1px solid #e5e7eb' }}>
                 <h2>📝 Knowledge Check Quiz</h2>
-                <p style={{ color: '#6b7280', marginBottom: '20px' }}>Course: <strong>{course?.title}</strong></p>
+                <p style={{ color: '#6b7280', marginBottom: '20px' }}>Course: <strong>{courseTitle}</strong></p>
 
                 {!submitted ? (
                     <div>

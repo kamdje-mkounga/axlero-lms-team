@@ -20,32 +20,16 @@ const createChapter = () => ({
   lessons: [createLesson()],
 });
 
-function mapCourseToApi(course, status = "draft") {
-  return {
-    title: course.title.trim(),
-    description: course.description.trim(),
-    category: course.category,
-    level: course.level.toLowerCase(),
-    status,
+const createQuizQuestion = () => ({
+  id: createId(),
+  question: "",
+  options: ["", "", "", ""],
+  correct: 0,
+});
 
-    chapters: course.chapters.map((chapter, chapterIndex) => ({
-      title: chapter.title.trim(),
-      description: (chapter.description || "").trim(),
-      order: chapterIndex + 1,
-
-      lessons: chapter.lessons.map((lesson, lessonIndex) => ({
-        title: lesson.title.trim(),
-        content: lesson.description.trim(),
-        videoUrl: lesson.videoUrl.trim(),
-        durationMinutes: Math.max(0, parseInt(lesson.durationMinutes, 10) || 0),
-        order: lessonIndex + 1,
-      })),
-    })),
-  };
+function countLessons(chapters) {
+  return chapters.reduce((total, chapter) => total + chapter.lessons.length, 0);
 }
-
-const countLessons = (chapters) =>
-  chapters.reduce((total, chapter) => total + chapter.lessons.length, 0);
 
 function isValidHttpUrl(value) {
   if (!value.trim()) return true;
@@ -64,6 +48,7 @@ export default function InstructorCourseBuilder({ onNavigateToCatalog }) {
     category: "Web Development",
     level: "Beginner",
     chapters: [createChapter()],
+    quizzes: [createQuizQuestion()],
   });
   const [courseId, setCourseId] = useState(null);
   const [courseStatus, setCourseStatus] = useState("draft");
@@ -77,6 +62,7 @@ export default function InstructorCourseBuilder({ onNavigateToCatalog }) {
     () => countLessons(course.chapters),
     [course.chapters],
   );
+
   const completedFields = useMemo(() => {
     const required = [
       Boolean(course.title.trim()),
@@ -90,6 +76,7 @@ export default function InstructorCourseBuilder({ onNavigateToCatalog }) {
     ];
     return required.filter(Boolean).length;
   }, [course]);
+
   const totalFields =
     3 +
     course.chapters.reduce(
@@ -156,6 +143,53 @@ export default function InstructorCourseBuilder({ onNavigateToCatalog }) {
     setMessage("");
   }
 
+  // Gestion des Quiz
+  function addQuizQuestion() {
+    setCourse((current) => ({
+      ...current,
+      quizzes: [...current.quizzes, createQuizQuestion()],
+    }));
+    setPreview(null);
+  }
+
+  function updateQuiz(quizId, field, value) {
+    setCourse((current) => ({
+      ...current,
+      quizzes: current.quizzes.map((q) =>
+        q.id === quizId ? { ...q, [field]: value } : q
+      ),
+    }));
+    setPreview(null);
+  }
+
+  function updateQuizOption(quizId, optionIndex, value) {
+    setCourse((current) => ({
+      ...current,
+      quizzes: current.quizzes.map((q) => {
+        if (q.id === quizId) {
+          const newOptions = [...q.options];
+          newOptions[optionIndex] = value;
+          return { ...q, options: newOptions };
+        }
+        return q;
+      }),
+    }));
+    setPreview(null);
+  }
+
+  function removeQuizQuestion(quizId) {
+    if (course.quizzes.length <= 1) {
+      setMessage("A course must have at least one quiz question.");
+      setMessageType("error");
+      return;
+    }
+    setCourse((current) => ({
+      ...current,
+      quizzes: current.quizzes.filter((q) => q.id !== quizId),
+    }));
+    setPreview(null);
+  }
+
   function addChapter() {
     setCourse((current) => ({
       ...current,
@@ -200,7 +234,7 @@ export default function InstructorCourseBuilder({ onNavigateToCatalog }) {
       chapters: current.chapters.map((chapter) =>
         chapter.id === chapterId
           ? { ...chapter, lessons: [...chapter.lessons, createLesson()] }
-          : chapter,
+          : chapter
       ),
     }));
     clearError(`lessons-${chapterId}`);
@@ -230,7 +264,7 @@ export default function InstructorCourseBuilder({ onNavigateToCatalog }) {
             ...item,
             lessons: item.lessons.filter((entry) => entry.id !== lessonId),
           }
-          : item,
+          : item
       ),
     }));
     setErrors((current) => {
@@ -310,69 +344,6 @@ export default function InstructorCourseBuilder({ onNavigateToCatalog }) {
     setMessageType("success");
   }
 
-  function handleReset() {
-    setCourse({
-      title: "",
-      description: "",
-      category: "Web Development",
-      level: "Beginner",
-      chapters: [createChapter()],
-    });
-    setCourseId(null);
-    setCourseStatus("draft");
-    setErrors({});
-    setPreview(null);
-    setMessage("Ready to create a new course.");
-    setMessageType("info");
-  }
-
-  async function handleSave(targetStatus = "draft") {
-    if (isSaving) return;
-
-    if (!validateCourse()) {
-      return;
-    }
-
-    setIsSaving(true);
-    setMessage("");
-
-    try {
-      const courseData = mapCourseToApi(course, targetStatus);
-      let result;
-
-      if (courseId) {
-        result = await updateCourseApi(courseId, courseData);
-        setCourseStatus(targetStatus);
-        setMessage(
-          targetStatus === "published"
-            ? "Course published successfully! It is now live in the catalog."
-            : "Course draft updated successfully!"
-        );
-      } else {
-        result = await createCourse(courseData);
-        const savedId = result?.id || result?._id;
-        if (savedId) {
-          setCourseId(savedId);
-        }
-        setCourseStatus(targetStatus);
-        setMessage(
-          targetStatus === "published"
-            ? "Course created and published successfully! It is now live in the catalog."
-            : "Course draft saved successfully!"
-        );
-      }
-
-      setMessageType("success");
-    } catch (error) {
-      setMessage(
-        error.message || "Unable to save the course. Please try again.",
-      );
-      setMessageType("error");
-    } finally {
-      setIsSaving(false);
-    }
-  }
-
   async function handleSaveAndPublish(event) {
     event.preventDefault();
     if (!validateForm()) {
@@ -395,13 +366,20 @@ export default function InstructorCourseBuilder({ onNavigateToCatalog }) {
         status: 'published',
         chapters: course.chapters.map((chapter, chapterIndex) => ({
           title: chapter.title,
-          order: chapterIndex + 1, // 👈 Starts at 1 instead of 0
+          description: chapter.description || '',
+          order: chapterIndex + 1,
           lessons: chapter.lessons.map((lesson, lessonIndex) => ({
             title: lesson.title,
             description: lesson.description,
             videoUrl: lesson.videoUrl,
-            order: lessonIndex + 1, // 👈 Starts at 1 instead of 0
+            durationMinutes: parseInt(lesson.durationMinutes, 10) || 0,
+            order: lessonIndex + 1,
           })),
+        })),
+        quizzes: course.quizzes.map((q) => ({
+          question: q.question,
+          options: q.options,
+          correct: q.correct,
         })),
       };
 
@@ -423,8 +401,7 @@ export default function InstructorCourseBuilder({ onNavigateToCatalog }) {
           <p className="builder-eyebrow">INSTRUCTOR WORKSPACE</p>
           <h2>Create a course</h2>
           <p>
-            Build a clear learning path by organizing your content into chapters
-            and lessons.
+            Build a clear learning path by organizing your content into chapters, lessons, and quizzes.
           </p>
         </div>
         <span className="builder-draft-badge">
@@ -464,12 +441,16 @@ export default function InstructorCourseBuilder({ onNavigateToCatalog }) {
             <strong>{lessonCount}</strong> lessons
           </span>
           <span>
+            <strong>{course.quizzes.length}</strong> quiz questions
+          </span>
+          <span>
             <strong>{course.level}</strong> level
           </span>
         </div>
       </div>
 
       <form noValidate>
+        {/* ÉTAPE 1 : Informations du cours */}
         <section className="builder-card">
           <div className="builder-card-heading">
             <span className="builder-step">01</span>
@@ -490,19 +471,8 @@ export default function InstructorCourseBuilder({ onNavigateToCatalog }) {
               placeholder="e.g. Full-Stack Web Development"
               maxLength={100}
               aria-invalid={Boolean(errors.title)}
-              aria-describedby={
-                errors.title ? "course-title-error" : "course-title-hint"
-              }
             />
-            {errors.title ? (
-              <p className="builder-error" id="course-title-error">
-                {errors.title}
-              </p>
-            ) : (
-              <p className="builder-hint" id="course-title-hint">
-                {course.title.length}/100 characters
-              </p>
-            )}
+            {errors.title && <p className="builder-error">{errors.title}</p>}
           </div>
 
           <div className="builder-field">
@@ -513,27 +483,11 @@ export default function InstructorCourseBuilder({ onNavigateToCatalog }) {
               id="course-description"
               rows={4}
               value={course.description}
-              onChange={(event) =>
-                updateCourse("description", event.target.value)
-              }
-              placeholder="Describe the skills students will gain and the topics covered."
+              onChange={(event) => updateCourse("description", event.target.value)}
+              placeholder="Describe the skills students will gain."
               maxLength={1000}
-              aria-invalid={Boolean(errors.description)}
-              aria-describedby={
-                errors.description
-                  ? "course-description-error"
-                  : "course-description-hint"
-              }
             />
-            {errors.description ? (
-              <p className="builder-error" id="course-description-error">
-                {errors.description}
-              </p>
-            ) : (
-              <p className="builder-hint" id="course-description-hint">
-                {course.description.length}/1000 characters
-              </p>
-            )}
+            {errors.description && <p className="builder-error">{errors.description}</p>}
           </div>
 
           <div className="builder-fields-row">
@@ -542,9 +496,7 @@ export default function InstructorCourseBuilder({ onNavigateToCatalog }) {
               <select
                 id="course-category"
                 value={course.category}
-                onChange={(event) =>
-                  updateCourse("category", event.target.value)
-                }
+                onChange={(event) => updateCourse("category", event.target.value)}
               >
                 <option>Web Development</option>
                 <option>Programming</option>
@@ -570,220 +522,61 @@ export default function InstructorCourseBuilder({ onNavigateToCatalog }) {
           </div>
         </section>
 
+        {/* ÉTAPE 2 : Curriculum (Chapitres & Leçons) */}
         <section className="builder-curriculum">
           <div className="builder-section-heading">
             <div>
               <p className="builder-eyebrow">02 · LEARNING PATH</p>
               <h3>Course curriculum</h3>
-              <p>
-                Arrange your course into chapters, then add lessons to each
-                chapter.
-              </p>
+              <p>Arrange your course into chapters, then add lessons to each chapter.</p>
             </div>
-            <button
-              className="builder-secondary-button"
-              type="button"
-              onClick={addChapter}
-            >
+            <button className="builder-secondary-button" type="button" onClick={addChapter}>
               + Add chapter
             </button>
           </div>
 
-          {errors.chapters && (
-            <p className="builder-error" role="alert">
-              {errors.chapters}
-            </p>
-          )}
-
-          {course.chapters.length === 0 && (
-            <div className="builder-empty-state">
-              <strong>No chapters yet</strong>
-              <p>Add your first chapter to start building the curriculum.</p>
-              <button
-                className="builder-secondary-button"
-                type="button"
-                onClick={addChapter}
-              >
-                + Add first chapter
-              </button>
-            </div>
-          )}
-
           {course.chapters.map((chapter, chapterIndex) => (
             <article className="builder-chapter" key={chapter.id}>
               <div className="builder-chapter-heading">
-                <span className="builder-number">
-                  {String(chapterIndex + 1).padStart(2, "0")}
-                </span>
+                <span className="builder-number">{String(chapterIndex + 1).padStart(2, "0")}</span>
                 <div className="builder-chapter-title">
-                  <label htmlFor={`chapter-${chapter.id}`}>
-                    Chapter {chapterIndex + 1} title{" "}
-                    <span aria-hidden="true">*</span>
-                  </label>
+                  <label htmlFor={`chapter-${chapter.id}`}>Chapter {chapterIndex + 1} title *</label>
                   <input
                     id={`chapter-${chapter.id}`}
                     value={chapter.title}
-                    onChange={(event) =>
-                      updateChapter(chapter.id, "title", event.target.value)
-                    }
-                    placeholder="e.g. Introduction to React"
-                    aria-invalid={Boolean(errors[`chapter-${chapter.id}`])}
-                  />
-                  {errors[`chapter-${chapter.id}`] && (
-                    <p className="builder-error">
-                      {errors[`chapter-${chapter.id}`]}
-                    </p>
-                  )}
-
-                  <label htmlFor={`chapter-desc-${chapter.id}`}>
-                    Chapter description{" "}
-                    <span className="builder-optional">(optional)</span>
-                  </label>
-                  <textarea
-                    id={`chapter-desc-${chapter.id}`}
-                    rows={2}
-                    value={chapter.description || ""}
-                    onChange={(event) =>
-                      updateChapter(
-                        chapter.id,
-                        "description",
-                        event.target.value,
-                      )
-                    }
-                    placeholder="Briefly describe what this chapter covers."
+                    onChange={(event) => updateChapter(chapter.id, "title", event.target.value)}
+                    placeholder="e.g. Introduction"
                   />
                 </div>
-                <button
-                  className="builder-remove-button"
-                  type="button"
-                  onClick={() => removeChapter(chapter.id)}
-                  aria-label={`Remove chapter ${chapterIndex + 1}`}
-                >
+                <button className="builder-remove-button" type="button" onClick={() => removeChapter(chapter.id)}>
                   Remove
                 </button>
               </div>
 
-              <div className="builder-chapter-meta">
-                {chapter.lessons.length}{" "}
-                {chapter.lessons.length === 1 ? "lesson" : "lessons"}
-              </div>
-
-              {errors[`lessons-${chapter.id}`] && (
-                <p className="builder-error">
-                  {errors[`lessons-${chapter.id}`]}
-                </p>
-              )}
-
               <div className="builder-lessons">
                 {chapter.lessons.map((lesson, lessonIndex) => (
                   <div className="builder-lesson" key={lesson.id}>
-                    <span className="builder-lesson-icon" aria-hidden="true">
-                      ▶
-                    </span>
                     <div className="builder-lesson-fields">
-                      <label htmlFor={`lesson-${lesson.id}`}>
-                        Lesson {lessonIndex + 1} title{" "}
-                        <span aria-hidden="true">*</span>
-                      </label>
+                      <label>Lesson {lessonIndex + 1} title *</label>
                       <input
-                        id={`lesson-${lesson.id}`}
                         value={lesson.title}
-                        onChange={(event) =>
-                          updateLesson(
-                            chapter.id,
-                            lesson.id,
-                            "title",
-                            event.target.value,
-                          )
-                        }
+                        onChange={(event) => updateLesson(chapter.id, lesson.id, "title", event.target.value)}
                         placeholder="e.g. What is a component?"
-                        aria-invalid={Boolean(errors[`lesson-${lesson.id}`])}
                       />
-                      {errors[`lesson-${lesson.id}`] && (
-                        <p className="builder-error">
-                          {errors[`lesson-${lesson.id}`]}
-                        </p>
-                      )}
-
-                      <label htmlFor={`lesson-description-${lesson.id}`}>
-                        Lesson description{" "}
-                        <span className="builder-optional">(optional)</span>
-                      </label>
-                      <textarea
-                        id={`lesson-description-${lesson.id}`}
-                        rows={2}
-                        value={lesson.description}
-                        onChange={(event) =>
-                          updateLesson(
-                            chapter.id,
-                            lesson.id,
-                            "description",
-                            event.target.value,
-                          )
-                        }
-                        placeholder="What will this lesson cover?"
-                      />
-
-                      <label htmlFor={`lesson-video-${lesson.id}`}>
-                        Video or resource URL{" "}
-                        <span className="builder-optional">(optional)</span>
-                      </label>
+                      <label>Video or resource URL</label>
                       <input
-                        id={`lesson-video-${lesson.id}`}
                         type="url"
                         value={lesson.videoUrl}
-                        onChange={(event) =>
-                          updateLesson(
-                            chapter.id,
-                            lesson.id,
-                            "videoUrl",
-                            event.target.value,
-                          )
-                        }
-                        placeholder="https://example.com/lesson"
-                        aria-invalid={Boolean(errors[`video-${lesson.id}`])}
-                      />
-                      {errors[`video-${lesson.id}`] && (
-                        <p className="builder-error">
-                          {errors[`video-${lesson.id}`]}
-                        </p>
-                      )}
-
-                      <label htmlFor={`lesson-duration-${lesson.id}`}>
-                        Duration in minutes{" "}
-                        <span className="builder-optional">(optional)</span>
-                      </label>
-                      <input
-                        id={`lesson-duration-${lesson.id}`}
-                        type="number"
-                        min="0"
-                        value={lesson.durationMinutes || ""}
-                        onChange={(event) =>
-                          updateLesson(
-                            chapter.id,
-                            lesson.id,
-                            "durationMinutes",
-                            event.target.value,
-                          )
-                        }
-                        placeholder="e.g. 15"
+                        onChange={(event) => updateLesson(chapter.id, lesson.id, "videoUrl", event.target.value)}
+                        placeholder="https://youtube.com/..."
                       />
                     </div>
-                    <button
-                      className="builder-remove-button"
-                      type="button"
-                      onClick={() => removeLesson(chapter.id, lesson.id)}
-                      aria-label={`Remove lesson ${lessonIndex + 1} from chapter ${chapterIndex + 1}`}
-                    >
+                    <button className="builder-remove-button" type="button" onClick={() => removeLesson(chapter.id, lesson.id)}>
                       Remove
                     </button>
                   </div>
                 ))}
-                <button
-                  className="builder-add-lesson"
-                  type="button"
-                  onClick={() => addLesson(chapter.id)}
-                >
+                <button className="builder-add-lesson" type="button" onClick={() => addLesson(chapter.id)}>
                   + Add lesson to this chapter
                 </button>
               </div>
@@ -791,11 +584,61 @@ export default function InstructorCourseBuilder({ onNavigateToCatalog }) {
           ))}
         </section>
 
+        {/* ÉTAPE 3 : Configuration du Quiz (Nouveau pour Semaine 4) */}
+        <section className="builder-card" style={{ marginTop: '2rem', padding: '1.5rem', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px' }}>
+          <div className="builder-card-heading">
+            <span className="builder-step">03</span>
+            <div>
+              <h3>Module Assessment Quiz</h3>
+              <p>Add multiple-choice questions to test learners before certification.</p>
+            </div>
+          </div>
+
+          {course.quizzes.map((quiz, qIndex) => (
+            <div key={quiz.id} style={{ marginTop: '1.5rem', padding: '1rem', background: '#fff', border: '1px solid #cbd5e1', borderRadius: '6px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+                <strong>Question {qIndex + 1}</strong>
+                <button type="button" onClick={() => removeQuizQuestion(quiz.id)} style={{ color: '#ef4444', background: 'none', border: 'none', cursor: 'pointer' }}>
+                  Remove Question
+                </button>
+              </div>
+
+              <input
+                type="text"
+                placeholder="Enter quiz question..."
+                value={quiz.question}
+                onChange={(e) => updateQuiz(quiz.id, "question", e.target.value)}
+                style={{ width: '100%', padding: '8px', marginBottom: '10px', borderRadius: '4px', border: '1px solid #cbd5e1' }}
+              />
+
+              <label style={{ fontSize: '0.9rem', color: '#64748b' }}>Options (Select the radio button for the correct answer):</label>
+              {quiz.options.map((opt, oIndex) => (
+                <div key={oIndex} style={{ display: 'flex', alignItems: 'center', gap: '10px', marginTop: '6px' }}>
+                  <input
+                    type="radio"
+                    name={`correct-${quiz.id}`}
+                    checked={quiz.correct === oIndex}
+                    onChange={() => updateQuiz(quiz.id, "correct", oIndex)}
+                  />
+                  <input
+                    type="text"
+                    placeholder={`Option ${oIndex + 1}`}
+                    value={opt}
+                    onChange={(e) => updateQuizOption(quiz.id, oIndex, e.target.value)}
+                    style={{ width: '100%', padding: '6px', borderRadius: '4px', border: '1px solid #cbd5e1' }}
+                  />
+                </div>
+              ))}
+            </div>
+          ))}
+
+          <button type="button" onClick={addQuizQuestion} style={{ marginTop: '1rem', background: '#4f46e5', color: '#fff', padding: '8px 16px', border: 'none', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold' }}>
+            + Add Quiz Question
+          </button>
+        </section>
+
         {message && (
-          <p
-            className={`builder-message builder-message-${messageType}`}
-            role={messageType === "error" ? "alert" : "status"}
-          >
+          <p className={`builder-message builder-message-${messageType}`} role={messageType === "error" ? "alert" : "status"}>
             {message}
           </p>
         )}
@@ -809,85 +652,6 @@ export default function InstructorCourseBuilder({ onNavigateToCatalog }) {
           </button>
         </div>
       </form>
-
-      {preview && (
-        <section className="builder-preview" aria-labelledby="preview-title" style={{ marginTop: '2rem' }}>
-          <div className="builder-preview-topline">
-            <div>
-              <p className="builder-eyebrow">03 · STUDENT VIEW</p>
-              <h3 id="preview-title">Course preview</h3>
-              <p>This is how your course outline will appear to learners.</p>
-            </div>
-            <span className="builder-preview-badge">Preview only</span>
-          </div>
-
-          <article className="builder-preview-hero">
-            <span className="course-category">{preview.category}</span>
-            <h4>{preview.title}</h4>
-            <p>{preview.description}</p>
-            <div className="builder-preview-stats">
-              <span>{preview.level}</span>
-              <span>{preview.chapters.length} chapters</span>
-              <span>{countLessons(preview.chapters)} lessons</span>
-            </div>
-          </article>
-
-          <div className="builder-preview-curriculum">
-            <h4>Course content</h4>
-            {preview.chapters.map((chapter, index) => (
-              <section className="preview-chapter" key={chapter.id}>
-                <div className="preview-chapter-heading">
-                  <span className="builder-number">
-                    {String(index + 1).padStart(2, "0")}
-                  </span>
-                  <div>
-                    <h5>{chapter.title}</h5>
-                    {chapter.description && (
-                      <p style={{ margin: "2px 0 4px", color: "#667085", fontSize: "0.85rem" }}>
-                        {chapter.description}
-                      </p>
-                    )}
-                    <p>
-                      {chapter.lessons.length}{" "}
-                      {chapter.lessons.length === 1 ? "lesson" : "lessons"}
-                    </p>
-                  </div>
-                </div>
-                <ul>
-                  {chapter.lessons.map((lesson, lessonIndex) => (
-                    <li key={lesson.id}>
-                      <span className="builder-preview-play" aria-hidden="true">
-                        ▶
-                      </span>
-                      <div>
-                        <strong>{lesson.title}</strong>
-                        {lesson.description && <p>{lesson.description}</p>}
-                        {lesson.durationMinutes && (
-                          <span style={{ fontSize: "0.8rem", color: "#667085", display: "inline-block", marginRight: "10px" }}>
-                            ⏱ {lesson.durationMinutes} min
-                          </span>
-                        )}
-                        {lesson.videoUrl && (
-                          <a
-                            href={lesson.videoUrl}
-                            target="_blank"
-                            rel="noreferrer noopener"
-                          >
-                            Open lesson resource ↗
-                          </a>
-                        )}
-                      </div>
-                      <span className="builder-preview-lesson-number">
-                        {String(lessonIndex + 1).padStart(2, "0")}
-                      </span>
-                    </li>
-                  ))}
-                </ul>
-              </section>
-            ))}
-          </div>
-        </section>
-      )}
     </section>
   );
 }

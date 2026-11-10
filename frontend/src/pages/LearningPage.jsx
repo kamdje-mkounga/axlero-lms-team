@@ -1,4 +1,5 @@
 import { useEffect, useState, useRef } from 'react';
+import QuizSession from './QuizSession'; // 👈 1. Importez votre composant QuizSession
 
 const API =
   `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api`;
@@ -38,7 +39,6 @@ function getCourseLessons(course) {
     : [];
 }
 
-// Fonction utilitaire pour récupérer le vrai nom de l'utilisateur connecté
 function getStudentName() {
   try {
     const userStr = sessionStorage.getItem('axleroUser') || localStorage.getItem('axleroUser');
@@ -64,13 +64,10 @@ function getStudentName() {
         return decoded.email.split('@')[0];
       }
     }
-  } catch (e) {
-    // En cas d'erreur de lecture
-  }
+  } catch (e) { }
   return 'Valued Student';
 }
 
-// Fonction utilitaire pour transformer un lien YouTube classique en lien embed si besoin
 function getEmbedUrl(url) {
   if (!url) return null;
   if (url.includes('youtube.com/watch?v=')) {
@@ -99,6 +96,11 @@ export default function LearningPage({ course, enrollment, onBack }) {
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
   const [showCertificate, setShowCertificate] = useState(false);
+
+  // Nouveaux états pour gérer le quiz de fin de cours
+  const [showQuizModal, setShowQuizModal] = useState(false);
+  const [quizPassed, setQuizPassed] = useState(false);
+
   const certificateRef = useRef(null);
 
   useEffect(() => {
@@ -335,10 +337,26 @@ export default function LearningPage({ course, enrollment, onBack }) {
         </button>
       </div>
 
-      {progress === 100 && (
+      {/* MODIFICATION ICI : À 100%, l'étudiant doit passer le Quiz avant de voir le certificat */}
+      {progress === 100 && !quizPassed && (
+        <div style={{ marginTop: '25px', padding: '20px', background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: '8px', textAlign: 'center' }}>
+          <p role="status" style={{ color: '#1e40af', fontWeight: 'bold', fontSize: '1.1em' }}>
+            🎯 All lessons completed! Pass the final module quiz to unlock your certificate.
+          </p>
+          <button
+            type="button"
+            onClick={() => setShowQuizModal(true)}
+            style={{ marginTop: '10px', background: '#2563eb', color: '#fff', padding: '10px 20px', border: 'none', borderRadius: '5px', cursor: 'pointer', fontWeight: 'bold' }}
+          >
+            🧠 Take Final Module Quiz
+          </button>
+        </div>
+      )}
+
+      {quizPassed && (
         <div style={{ marginTop: '25px', padding: '20px', background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '8px', textAlign: 'center' }}>
           <p role="status" style={{ color: '#166534', fontWeight: 'bold', fontSize: '1.1em' }}>
-            🎉 Congratulations! You completed all lessons.
+            🎉 Congratulations! Quiz passed and course completed successfully.
           </p>
           <button
             type="button"
@@ -350,6 +368,26 @@ export default function LearningPage({ course, enrollment, onBack }) {
         </div>
       )}
 
+      {/* Fenêtre modale du Quiz */}
+      {showQuizModal && (
+        <div style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', background: 'rgba(0,0,0,0.6)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000 }}>
+          <div style={{ background: '#fff', width: '90%', maxWidth: '600px', borderRadius: '10px', padding: '20px', position: 'relative' }}>
+            <QuizSession
+              course={course}
+              onBack={() => setShowQuizModal(false)}
+              onComplete={(score, total) => {
+                const passed = (score / total) >= 0.5; // Réussite si score >= 50%
+                if (passed) {
+                  setQuizPassed(true);
+                  setShowQuizModal(false);
+                }
+              }}
+            />
+          </div>
+        </div>
+      )}
+
+      {/* Modal du Certificat */}
       {showCertificate && (
         <div className="certificate-modal" style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', background: 'rgba(0,0,0,0.6)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000 }}>
           <div ref={certificateRef} style={{ background: '#fff', padding: '40px', borderRadius: '10px', textAlign: 'center', maxWidth: '600px', width: '90%', border: '8px solid #4f46e5', position: 'relative' }}>
