@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from 'react';
 import {
   getCourseById,
@@ -14,7 +13,7 @@ export default function CourseDetail({
   const courseId = course?.id || course?._id;
   const [courseDetails, setCourseDetails] = useState(course || null);
   const [enrollment, setEnrollment] = useState(null);
-  const [enrolled, setEnrolled] = useState(false);
+  const [enrolled, setEnrolled] = useState(course?.isEnrolled || false);
   const [loading, setLoading] = useState(false);
   const [enrolling, setEnrolling] = useState(false);
   const [error, setError] = useState('');
@@ -39,19 +38,28 @@ export default function CourseDetail({
 
         setCourseDetails(details);
 
+        // Vérifie si le backend renvoie directement l'info d'inscription
+        let isAlreadyEnrolled = details?.isEnrolled || false;
+
         const currentEnrollment = enrollments.find((item) => {
           const enrolledCourseId =
             item.courseId ||
             item.course?._id ||
+            item.course?.id ||
             item.course;
 
           return (
-            String(enrolledCourseId) === String(course._id)
+            String(enrolledCourseId) === String(courseId) ||
+            String(enrolledCourseId) === String(course?._id)
           );
         });
 
-        setEnrollment(currentEnrollment || null);
-        setEnrolled(Boolean(currentEnrollment));
+        if (currentEnrollment) {
+          isAlreadyEnrolled = true;
+          setEnrollment(currentEnrollment);
+        }
+
+        setEnrolled(isAlreadyEnrolled);
       } catch (err) {
         if (active) {
           setError(
@@ -70,7 +78,7 @@ export default function CourseDetail({
     return () => {
       active = false;
     };
-  }, [courseId]);
+  }, [courseId, course]);
 
   async function handleEnroll() {
     const targetId = courseDetails?.id || courseDetails?._id || courseId;
@@ -81,28 +89,34 @@ export default function CourseDetail({
     setMessage('');
 
     try {
-      await enrollInCourse(courseDetails._id);
+      await enrollInCourse(targetId);
 
-      // Refresh enrollment details after successful enrollment
+      // Rafraîchit les inscriptions après succès
       const enrollments = await getMyEnrollments();
 
       const currentEnrollment = enrollments.find((item) => {
         const enrolledCourseId =
           item.courseId ||
           item.course?._id ||
+          item.course?.id ||
           item.course;
 
         return (
-          String(enrolledCourseId) ===
-          String(courseDetails._id)
+          String(enrolledCourseId) === String(targetId)
         );
       });
 
       setEnrollment(currentEnrollment || null);
-      setEnrolled(Boolean(currentEnrollment));
+      setEnrolled(true);
 
       setMessage('Enrollment successful!');
     } catch (err) {
+      if (err.status === 409 || err.message?.toLowerCase().includes('already enrolled')) {
+        setEnrolled(true);
+        setMessage('You are already enrolled in this course.');
+        return;
+      }
+
       setError(
         err.message || 'Unable to enroll in this course.'
       );
@@ -112,15 +126,10 @@ export default function CourseDetail({
   }
 
   function handleContinue() {
-    if (!enrollment) {
-      setError('Enrollment details not found. Please refresh.');
-      return;
-    }
-
     if (typeof onContinue === 'function') {
       onContinue({
         course: courseDetails,
-        enrollment,
+        enrollment: enrollment || { courseId },
       });
     }
   }
@@ -142,7 +151,7 @@ export default function CourseDetail({
   const instructor =
     typeof selectedCourse.instructor === 'string'
       ? selectedCourse.instructor
-      : selectedCourse.instructor?.name || 'Not specified';
+      : selectedCourse.instructor?.name || selectedCourse.instructor?.email || 'Not specified';
 
   return (
     <section className="student-page">
@@ -173,11 +182,34 @@ export default function CourseDetail({
 
       {error && <p role="alert">{error}</p>}
 
+      {/* Affichage des chapitres et leçons si disponibles */}
+      {selectedCourse.chapters && selectedCourse.chapters.length > 0 && (
+        <div className="course-chapters-section" style={{ marginTop: '20px', marginBottom: '20px' }}>
+          <h3>Course Content ({selectedCourse.chapters.length} Chapters)</h3>
+          <ul>
+            {selectedCourse.chapters.map((chapter, index) => (
+              <li key={chapter._id || index} style={{ marginBottom: '10px' }}>
+                <strong>Chapter {index + 1}: {chapter.title}</strong>
+                {chapter.lessons && chapter.lessons.length > 0 && (
+                  <ul style={{ marginTop: '5px', paddingLeft: '20px' }}>
+                    {chapter.lessons.map((lesson, lIndex) => (
+                      <li key={lesson._id || lIndex}>
+                        {lesson.title} {lesson.duration ? `(${lesson.duration} min)` : ''}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
       {enrolled ? (
         <button
           type="button"
           onClick={handleContinue}
-          disabled={loading || !enrollment}
+          disabled={loading}
         >
           Continue Learning
         </button>
@@ -191,7 +223,7 @@ export default function CourseDetail({
         </button>
       )}
 
-      {message && <p role="status">{message}</p>}
+      {message && <p role="status" style={{ marginTop: '10px', color: 'green' }}>{message}</p>}
     </section>
   );
 }

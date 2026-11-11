@@ -9,8 +9,7 @@ async function connectDB() {
         console.log('MongoDB connected successfully');
     } catch (error) {
         console.error('MongoDB connection failed:', error.message);
-        // Ne mettez PAS process.exit(1) ici pour l'instant, 
-        // cela permettra au serveur de rester allumé pour tester le frontend !
+        process.exit(1); // This stops the server from starting if DB fails
     }
 }
 

@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import CourseCatalog from './pages/CourseCatalog';
 import CourseDetail from './pages/CourseDetail';
@@ -18,12 +17,26 @@ function getSavedUser() {
   }
 }
 
-export default function App() {
-  const [page, setPage] = useState('courses');
-  const [selectedCourse, setSelectedCourse] = useState(null);
-  const [selectedEnrollment, setSelectedEnrollment] = useState(null);
+// Robust check to determine if the user is an instructor
+function checkIsInstructor(userObj) {
+  if (!userObj) return false;
+  const role = userObj.role?.toLowerCase();
+  const name = userObj.name?.toUpperCase() || '';
 
+  return role === 'instructor' || name.includes('INSTRUCTOR');
+}
+
+export default function App() {
   const [user, setUser] = useState(getSavedUser);
+
+  // Safely evaluate initial page state based on user role
+  const [page, setPage] = useState(() => {
+    const savedUser = getSavedUser();
+    return checkIsInstructor(savedUser) ? 'instructor' : 'courses';
+  });
+
+  const [selectedCourse, setSelectedCourse] = useState(null);
+  const [selectedEnrollment, setSelectedEnrollment] = useState(null); // <-- Moved inside App component!
   const [authMode, setAuthMode] = useState('login');
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -32,6 +45,8 @@ export default function App() {
   const [authLoading, setAuthLoading] = useState(false);
   const [authMessage, setAuthMessage] = useState('');
   const [authError, setAuthError] = useState('');
+
+  const isInstructor = checkIsInstructor(user);
 
   function openCourse(course) {
     setSelectedCourse(course);
@@ -85,7 +100,7 @@ export default function App() {
 
         setUser(mockUser);
         setPassword('');
-        setPage('courses');
+        setPage(checkIsInstructor(mockUser) ? 'instructor' : 'courses');
         return;
       }
 
@@ -97,15 +112,15 @@ export default function App() {
       const payload =
         authMode === 'register'
           ? {
-              name: name.trim(),
-              email: normalizedEmail,
-              password,
-              role,
-            }
+            name: name.trim(),
+            email: normalizedEmail,
+            password,
+            role,
+          }
           : {
-              email: normalizedEmail,
-              password,
-            };
+            email: normalizedEmail,
+            password,
+          };
 
       const response = await fetch(`${API}${endpoint}`, {
         method: 'POST',
@@ -136,15 +151,23 @@ export default function App() {
         );
       }
 
+
       sessionStorage.setItem('axleroToken', resultData.token);
       sessionStorage.setItem(
         'axleroUser',
         JSON.stringify(resultData.user)
       );
+      console.log('LOGGED IN USER RESPONSE:', resultData.user);
+
+      sessionStorage.setItem('axleroToken', resultData.token);
+      sessionStorage.setItem('axleroUser', JSON.stringify(resultData.user));
+
 
       setUser(resultData.user);
       setPassword('');
-      setPage('courses');
+
+      // Redirect instructors directly to the course builder
+      setPage(checkIsInstructor(resultData.user) ? 'instructor' : 'courses');
     } catch (err) {
       setAuthError(
         err.message || 'Unable to connect to the server.'
@@ -160,7 +183,7 @@ export default function App() {
 
     setUser(null);
     setSelectedCourse(null);
-    setSelectedEnrollment(null);
+    setSelectedEnrollment(null); // <-- Fixed typo here
     setPage('courses');
     setAuthMessage('');
     setAuthError('');
@@ -179,19 +202,14 @@ export default function App() {
             Course Catalog
           </button>
 
-          <button
-            type="button"
-            onClick={() => showPage('dashboard')}
-          >
-            My Learning
-          </button>
-
-          {user?.role === 'instructor' && (
-            <button
-              type="button"
-              onClick={() => showPage('instructor')}
-            >
-              Create Course
+          {/* Dynamic Dashboard Navigation Button */}
+          {isInstructor ? (
+            <button type="button" onClick={() => showPage('instructor')}>
+              Instructor Dashboard
+            </button>
+          ) : (
+            <button type="button" onClick={() => showPage('dashboard')}>
+              My Learning
             </button>
           )}
 
@@ -317,10 +335,9 @@ export default function App() {
           <StudentDashboard onSelectCourse={openCourse} />
         )}
 
-        {page === 'instructor' &&
-          user?.role === 'instructor' && (
-            <InstructorCourseBuilder />
-          )}
+        {page === 'instructor' && isInstructor && (
+          <InstructorCourseBuilder />
+        )}
 
         {page === 'detail' && selectedCourse && (
           <CourseDetail

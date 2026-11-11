@@ -8,6 +8,7 @@ class Course {
     level = 'beginner',
     status = 'draft',
     chapters = [],
+    quizzes = [],
     createdAt = null,
     updatedAt = null,
   }) {
@@ -23,7 +24,7 @@ class Course {
       throw new Error('Course instructor is required');
     }
 
-    if (!['beginner', 'intermediate', 'advanced'].includes(level)) {
+    if (!['beginner', 'intermediate', 'advanced'].includes(level.toLowerCase())) {
       throw new Error('Invalid course level');
     }
 
@@ -36,9 +37,10 @@ class Course {
     this.description = description.trim();
     this.instructor = instructor;
     this.category = category;
-    this.level = level;
+    this.level = level.toLowerCase();
     this.status = status;
     this.chapters = chapters;
+    this.quizzes = Array.isArray(quizzes) ? quizzes : [];
     this.createdAt = createdAt;
     this.updatedAt = updatedAt;
   }
@@ -48,6 +50,10 @@ class Course {
       (total, chapter) => total + (chapter.lessons || []).length,
       0
     );
+  }
+
+  getTotalQuizzes() {
+    return this.quizzes.length;
   }
 }
 

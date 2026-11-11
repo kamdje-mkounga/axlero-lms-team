@@ -1,4 +1,3 @@
-
 const express = require('express');
 
 const {
@@ -18,31 +17,31 @@ const router = express.Router();
 // All enrollment routes require authentication.
 router.use(authMiddleware);
 
-// Students can view their enrollments.
+// Students and instructors can view their enrollments.
 router.get(
   '/me',
-  authorizeRoles('student', 'admin'),
+  authorizeRoles('student', 'admin', 'instructor'),
   getMyEnrollments
 );
 
-// Students can enroll in published courses.
+// Students and instructors can enroll in courses.
 router.post(
   '/',
-  authorizeRoles('student'),
+  authorizeRoles('student', 'instructor'),
   enrollInCourse
 );
 
 // View one enrollment.
 router.get(
   '/:id',
-  authorizeRoles('student', 'admin'),
+  authorizeRoles('student', 'admin', 'instructor'),
   getEnrollment
 );
 
 // Update lesson completion progress.
 router.patch(
   '/:id/progress',
-  authorizeRoles('student'),
+  authorizeRoles('student', 'instructor'),
   updateProgress
 );
 
