@@ -133,15 +133,11 @@ export default function App() {
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(
-          data.message || 'Authentication failed.'
-        );
+        throw new Error(data.message || 'Authentication failed.');
       }
 
       if (authMode === 'register') {
-        setAuthMessage(
-          'Registration successful. Please log in.'
-        );
+        setAuthMessage('Registration successful. Please log in.');
         setAuthMode('login');
         setPassword('');
         return;
@@ -155,10 +151,17 @@ export default function App() {
         );
       }
 
+
+      sessionStorage.setItem('axleroToken', resultData.token);
+      sessionStorage.setItem(
+        'axleroUser',
+        JSON.stringify(resultData.user)
+      );
       console.log('LOGGED IN USER RESPONSE:', resultData.user);
 
       sessionStorage.setItem('axleroToken', resultData.token);
       sessionStorage.setItem('axleroUser', JSON.stringify(resultData.user));
+
 
       setUser(resultData.user);
       setPassword('');
@@ -234,88 +237,60 @@ export default function App() {
         {page === 'auth' && (
           <section className="student-page auth-panel">
             <h2>
-              {authMode === 'login'
-                ? 'Login'
-                : 'Create Account'}
+              {authMode === 'login' ? 'Login' : 'Create Account'}
             </h2>
 
             <form onSubmit={handleAuth}>
               {authMode === 'register' && (
                 <>
-                  <label htmlFor="auth-name">
-                    Full name
-                  </label>
+                  <label htmlFor="auth-name">Full name</label>
 
                   <input
                     id="auth-name"
                     type="text"
                     value={name}
-                    onChange={(event) =>
-                      setName(event.target.value)
-                    }
+                    onChange={(event) => setName(event.target.value)}
                     required
                   />
 
-                  <label htmlFor="auth-role">
-                    Account type
-                  </label>
+                  <label htmlFor="auth-role">Account type</label>
 
                   <select
                     id="auth-role"
                     value={role}
-                    onChange={(event) =>
-                      setRole(event.target.value)
-                    }
+                    onChange={(event) => setRole(event.target.value)}
                   >
                     <option value="student">Student</option>
-                    <option value="instructor">
-                      Instructor
-                    </option>
+                    <option value="instructor">Instructor</option>
                   </select>
                 </>
               )}
 
-              <label htmlFor="auth-email">
-                Email
-              </label>
+              <label htmlFor="auth-email">Email</label>
 
               <input
                 id="auth-email"
                 type="email"
                 value={email}
-                onChange={(event) =>
-                  setEmail(event.target.value)
-                }
+                onChange={(event) => setEmail(event.target.value)}
                 required
               />
 
-              <label htmlFor="auth-password">
-                Password
-              </label>
+              <label htmlFor="auth-password">Password</label>
 
               <input
                 id="auth-password"
                 type="password"
                 value={password}
-                onChange={(event) =>
-                  setPassword(event.target.value)
-                }
+                onChange={(event) => setPassword(event.target.value)}
                 minLength={6}
                 required
               />
 
-              {authError && (
-                <p role="alert">{authError}</p>
-              )}
+              {authError && <p role="alert">{authError}</p>}
+              {authMessage && <p role="status">{authMessage}</p>}
 
-              {authMessage && (
-                <p role="status">{authMessage}</p>
-              )}
-
-              <button
-                type="submit"
-                disabled={authLoading}
-              >
+              <button type="submit" disabled={authLoading}>
                 {authLoading
                   ? 'Please wait...'
                   : authMode === 'login'
@@ -333,17 +308,13 @@ export default function App() {
                 type="button"
                 onClick={() => {
                   setAuthMode(
-                    authMode === 'login'
-                      ? 'register'
-                      : 'login'
+                    authMode === 'login' ? 'register' : 'login'
                   );
                   setAuthError('');
                   setAuthMessage('');
                 }}
               >
-                {authMode === 'login'
-                  ? 'Register'
-                  : 'Login'}
+                {authMode === 'login' ? 'Register' : 'Login'}
               </button>
             </p>
 
